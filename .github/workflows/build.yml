@@ -2,7 +2,7 @@ name: Build Flutter App
 
 on:
   push:
-    branches: [ "main" ] # यह main ब्रांच में पुश होने पर चलेगा
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -16,7 +16,8 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '11'
+          # Java का वर्जन 11 से 17 कर दिया गया है
+          java-version: '17'
 
       - name: 3. Set up Flutter
         uses: subosito/flutter-action@v2
@@ -34,4 +35,3 @@ jobs:
         with:
           name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-
