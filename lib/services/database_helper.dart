@@ -1,5 +1,9 @@
 import 'package:sqflite/sqflite.dart';
-import 'package.path/path.dart';
+import 'package:path/path.dart'; // गलत इम्पोर्ट को ठीक कर दिया गया है
+
+// नए मॉडल इम्पोर्ट किए गए हैं
+import 'package:chetegram/models/timetable_model.dart';
+import 'package:chetegram/models/time_slot_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -19,7 +23,6 @@ class DatabaseHelper {
     return await openDatabase(path, version: 3, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
-  // यह फंक्शन सिर्फ तब चलेगा जब DB पहली बार बनेगा
   Future _createDB(Database db, int version) async {
      await db.execute('''
       CREATE TABLE tasks (
@@ -63,7 +66,6 @@ class DatabaseHelper {
     ''');
   }
 
-  // यह फंक्शन तब चलेगा जब DB का वर्जन बढ़ेगा
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute("ALTER TABLE tasks ADD COLUMN readingStage INTEGER DEFAULT 1");
