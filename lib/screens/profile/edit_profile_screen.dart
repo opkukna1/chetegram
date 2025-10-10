@@ -20,12 +20,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   String _profilePicUrl = '';
   String _coverPhotoUrl = '';
-  bool _isLoading = false;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // मौजूदा डेटा लोड करें
+    _loadInitialData();
+  }
+
+  void _loadInitialData() {
     _firestoreService.getUserProfile().then((doc) {
       if (doc != null && doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
@@ -35,7 +38,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         setState(() {
           _profilePicUrl = data['profilePicUrl'] ?? '';
           _coverPhotoUrl = data['coverPhotoUrl'] ?? '';
+          _isLoading = false;
         });
+      } else {
+        setState(() => _isLoading = false);
       }
     });
   }
@@ -53,7 +59,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
 
     setState(() => _isLoading = false);
-    if(mounted) Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -62,55 +68,69 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       appBar: AppBar(
         title: const Text('Edit Profile'),
         actions: [
-          if (_isLoading) const CircularProgressIndicator() else IconButton(icon: const Icon(Icons.save), onPressed: _saveProfile),
+          if (_isLoading) 
+            const Padding(padding: EdgeInsets.all(16.0), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+          else 
+            IconButton(icon: const Icon(Icons.save), onPressed: _saveProfile),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // इमेज अपलोड सेक्शन
-          Stack(
-            alignment: Alignment.bottomLeft,
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator())
+        : ListView(
+            padding: const EdgeInsets.all(16),
             children: [
-              // कवर फोटो
-              GestureDetector(
-                onTap: () async {
-                  final url = await _storageService.pickAndUploadImage('cover_photos/${_currentUser!.uid}');
-                  if (url != null) setState(() => _coverPhotoUrl = url);
-                },
-                child: Container(
-                  height: 150,
-                  width: double.infinity,
-                  color: Colors.grey.shade300,
-                  child: _coverPhotoUrl.isNotEmpty ? Image.network(_coverPhotoUrl, fit: BoxFit.cover) : const Icon(Icons.add_a_photo),
-                ),
-              ),
-              // प्रोफाइल फोटो
-              Padding(
-                padding: const EdgeInsets.only(left: 16.0),
-                child: GestureDetector(
-                  onTap: () async {
-                    final url = await _storageService.pickAndUploadImage('profile_pics/${_currentUser!.uid}');
-                    if (url != null) setState(() => _profilePicUrl = url);
-                  },
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.grey.shade400,
-                    backgroundImage: _profilePicUrl.isNotEmpty ? NetworkImage(_profilePicUrl) : null,
-                    child: _profilePicUrl.isEmpty ? const Icon(Icons.add_a_photo, size: 40) : null,
+              Stack(
+                alignment: Alignment.bottomLeft,
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      setState(() => _isLoading = true);
+                      final url = await _storageService.pickAndUploadImage('cover_photos/${_currentUser!.uid}');
+                      if (url != null) setState(() => _coverPhotoUrl = url);
+                      setState(() => _isLoading = false);
+                    },
+                    child: Container(
+                      height: 150,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(12),
+                        image: _coverPhotoUrl.isNotEmpty ? DecorationImage(image: NetworkImage(_coverPhotoUrl), fit: BoxFit.cover) : null,
+                      ),
+                      child: _coverPhotoUrl.isEmpty ? const Center(child: Icon(Icons.add_a_photo, color: Colors.grey)) : null,
+                    ),
                   ),
-                ),
-              )
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16.0),
+                    child: GestureDetector(
+                      onTap: () async {
+                        setState(() => _isLoading = true);
+                        final url = await _storageService.pickAndUploadImage('profile_pics/${_currentUser!.uid}');
+                        if (url != null) setState(() => _profilePicUrl = url);
+                        setState(() => _isLoading = false);
+                      },
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.white,
+                        child: CircleAvatar(
+                          radius: 48,
+                          backgroundColor: Colors.grey.shade400,
+                          backgroundImage: _profilePicUrl.isNotEmpty ? NetworkImage(_profilePicUrl) : null,
+                          child: _profilePicUrl.isEmpty ? const Icon(Icons.add_a_photo, size: 40, color: Colors.white) : null,
+                        ),
+                      ),
+                    ),
+                  )
+                ],
+              ),
+              const SizedBox(height: 24),
+              TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Name', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              TextField(controller: _bioController, decoration: const InputDecoration(labelText: 'Bio', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              TextField(controller: _locationController, decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder())),
             ],
           ),
-          const SizedBox(height: 24),
-          TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Name')),
-          const SizedBox(height: 16),
-          TextField(controller: _bioController, decoration: const InputDecoration(labelText: 'Bio')),
-          const SizedBox(height: 16),
-          TextField(controller: _locationController, decoration: const InputDecoration(labelText: 'Location')),
-        ],
-      ),
     );
   }
 }
