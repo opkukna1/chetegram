@@ -1,5 +1,5 @@
 import 'package:chetegram/models/timetable_model.dart';
-import 'package:chetegram/services/database_helper.dart';
+import 'package:chetegram/services/firestore_service.dart'; // FirestoreService इम्पोर्ट करें
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,24 +11,14 @@ class TimeTableScreen extends StatefulWidget {
 }
 
 class _TimeTableScreenState extends State<TimeTableScreen> {
-  late Future<List<TimeTableModel>> _timetablesFuture;
+  final FirestoreService _firestoreService = FirestoreService();
 
-  @override
-  void initState() {
-    super.initState();
-    _refreshTimeTables();
-  }
-
-  void _refreshTimeTables() {
-    setState(() {
-      _timetablesFuture = DatabaseHelper.instance.getAllTimeTablesWithSlots();
-    });
-  }
-
-  void _deleteTimeTable(int id) async {
-    await DatabaseHelper.instance.deleteTimeTable(id);
-    _refreshTimeTables();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Time Table Deleted')));
+  void _deleteTimeTable(String id) async {
+    // DatabaseHelper की जगह FirestoreService का उपयोग करें
+    await _firestoreService.deleteTimeTable(id);
+    if(mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Time Table Deleted')));
+    }
   }
 
   @override
@@ -37,17 +27,20 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
       appBar: AppBar(
         title: const Text('My Time Tables'),
       ),
-      body: FutureBuilder<List<TimeTableModel>>(
-        future: _timetablesFuture,
+      body: StreamBuilder<List<TimeTableModel>>( // FutureBuilder को StreamBuilder से बदलें
+        stream: _firestoreService.getTimeTablesStream(), // stream का उपयोग करें
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('No time tables created yet.'));
           }
+          
           final timetables = snapshot.data!;
-          // PageView का उपयोग करके स्वाइप करने वाला फीचर
           return PageView.builder(
             itemCount: timetables.length,
             itemBuilder: (context, index) {
@@ -60,7 +53,7 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
                   child: Column(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -77,7 +70,6 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
                                 if (value == 'delete') {
                                   _deleteTimeTable(timetable.id!);
                                 }
-                                // Edit का लॉजिक बाद में जोड़ा जाएगा
                               },
                             ),
                           ],
@@ -90,7 +82,7 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
                           itemBuilder: (context, slotIndex) {
                             final slot = timetable.slots[slotIndex];
                             return ListTile(
-                              leading: CircleAvatar(child: Text(slot.subject.substring(0, 1))),
+                              leading: CircleAvatar(child: Text(slot.subject.substring(0, 1).toUpperCase())),
                               title: Text(slot.subject),
                               subtitle: Text(slot.frequency),
                               trailing: Text(
@@ -110,7 +102,8 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          context.push('/add-timetable').then((_) => _refreshTimeTables());
+          // अब .then() की ज़रूरत नहीं है क्योंकि StreamBuilder अपने आप UI अपडेट कर देगा
+          context.push('/add-timetable');
         },
         child: const Icon(Icons.add),
       ),
