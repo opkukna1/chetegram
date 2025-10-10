@@ -80,6 +80,11 @@ class DatabaseHelper {
     int id = row['id'];
     return await db.update('tasks', row, where: 'id = ?', whereArgs: [id]);
   }
+
+  Future<int> deleteTask(int id) async {
+    Database db = await instance.database;
+    return await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
+  }
   
   Future<List<Map<String, dynamic>>> getTodaysTasks() async {
     Database db = await instance.database;
