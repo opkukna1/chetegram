@@ -2,7 +2,17 @@ import 'package:chetegram/config/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-void main() {
+// Firebase के लिए नए इम्पोर्ट्स
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart'; // यह फाइल flutterfire configure ने बनाई थी
+
+void main() async { // main को async बनाएं
+  // यह सुनिश्चित करें कि Flutter पूरी तरह से तैयार है
+  WidgetsFlutterBinding.ensureInitialized();
+  // Firebase को इनिशियलाइज़ करें
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
