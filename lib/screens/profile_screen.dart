@@ -20,18 +20,55 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   late TabController _tabController;
   late Future<DocumentSnapshot?> _userProfileFuture;
   final String? _currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  
+  bool _isFollowing = false;
+  bool _isLoadingFollow = true; // Initially true to show loading
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadProfile();
+    _checkIfFollowing();
   }
   
   void _loadProfile() {
     setState(() {
+      // अगर userId है, तो उसकी प्रोफाइल लाओ, नहीं तो अपनी
       _userProfileFuture = _firestoreService.getUserProfile(widget.userId);
     });
+  }
+
+  void _checkIfFollowing() async {
+    // अगर यह मेरी अपनी प्रोफाइल है, तो कुछ नहीं करना
+    if (widget.userId == null || widget.userId == _currentUserId) {
+      setState(() => _isLoadingFollow = false);
+      return;
+    }
+    // Firestore से चेक करें कि क्या मैं इस user को फॉलो कर रहा हूँ
+    bool following = await _firestoreService.isFollowing(widget.userId!);
+    if (mounted) {
+      setState(() {
+        _isFollowing = following;
+        _isLoadingFollow = false;
+      });
+    }
+  }
+
+  void _handleFollowButton() async {
+    if (_currentUserId == null || widget.userId == null) return;
+
+    setState(() => _isLoadingFollow = true);
+
+    if (_isFollowing) {
+      await _firestoreService.unfollowUser(widget.userId!);
+    } else {
+      await _firestoreService.followUser(widget.userId!);
+    }
+    
+    // UI को अपडेट करने के लिए दोनों फंक्शन्स को दोबारा कॉल करें
+    _checkIfFollowing();
+    _loadProfile();
   }
 
   @override
@@ -65,7 +102,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   floating: false,
                   pinned: true,
                   actions: [
-                    if(isMyProfile) // लॉगआउट का बटन सिर्फ मेरी प्रोफाइल पर दिखेगा
+                    if(isMyProfile)
                       IconButton(
                         icon: const Icon(Icons.logout),
                         onPressed: () async {
@@ -114,10 +151,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                 onPressed: () => context.push('/edit-profile').then((_) => _loadProfile()),
                                 child: const Text('Edit Profile'),
                               )
-                            : ElevatedButton( // भविष्य में Follow/Unfollow बटन यहाँ आएगा
-                                onPressed: () {},
-                                child: const Text('Follow'),
-                              ),
+                            : _isLoadingFollow
+                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                                : _isFollowing
+                                    ? OutlinedButton(onPressed: _handleFollowButton, child: const Text('Unfollow'))
+                                    : ElevatedButton(onPressed: _handleFollowButton, child: const Text('Follow')),
                       ),
                       Text(user.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                       Text('@${user.email.split('@')[0]}', style: const TextStyle(color: Colors.grey)),
