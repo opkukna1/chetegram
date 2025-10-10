@@ -1,5 +1,5 @@
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import 'package.path/path.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -16,32 +16,12 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 2, onCreate: _createDB, onUpgrade: _upgradeDB);
+    return await openDatabase(path, version: 3, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
+  // यह फंक्शन सिर्फ तब चलेगा जब DB पहली बार बनेगा
   Future _createDB(Database db, int version) async {
-    await _createTables(db);
-  }
-
-  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      var tableInfo = await db.rawQuery('PRAGMA table_info(tasks)');
-      List<String> columnNames = tableInfo.map((row) => row['name'] as String).toList();
-      
-      if (!columnNames.contains('readingStage')) {
-        await db.execute("ALTER TABLE tasks ADD COLUMN readingStage INTEGER DEFAULT 1");
-      }
-      if (!columnNames.contains('nextRevisionDate')) {
-        await db.execute("ALTER TABLE tasks ADD COLUMN nextRevisionDate TEXT");
-      }
-      if (!columnNames.contains('status')) {
-         await db.execute("ALTER TABLE tasks ADD COLUMN status TEXT DEFAULT 'pending'");
-      }
-    }
-  }
-
-  Future _createTables(Database db) async {
-    await db.execute('''
+     await db.execute('''
       CREATE TABLE tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         subject TEXT NOT NULL,
@@ -62,6 +42,53 @@ class DatabaseHelper {
         colorHex TEXT NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE timetables (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL
+      )
+    ''');
+      
+    await db.execute('''
+      CREATE TABLE time_slots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timetableId INTEGER NOT NULL,
+        subject TEXT NOT NULL,
+        startTimeMinutes INTEGER NOT NULL,
+        endTimeMinutes INTEGER NOT NULL,
+        frequency TEXT NOT NULL,
+        FOREIGN KEY (timetableId) REFERENCES timetables (id) ON DELETE CASCADE
+      )
+    ''');
+  }
+
+  // यह फंक्शन तब चलेगा जब DB का वर्जन बढ़ेगा
+  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute("ALTER TABLE tasks ADD COLUMN readingStage INTEGER DEFAULT 1");
+      await db.execute("ALTER TABLE tasks ADD COLUMN nextRevisionDate TEXT");
+      await db.execute("ALTER TABLE tasks ADD COLUMN status TEXT DEFAULT 'pending'");
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE timetables (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE time_slots (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          timetableId INTEGER NOT NULL,
+          subject TEXT NOT NULL,
+          startTimeMinutes INTEGER NOT NULL,
+          endTimeMinutes INTEGER NOT NULL,
+          frequency TEXT NOT NULL,
+          FOREIGN KEY (timetableId) REFERENCES timetables (id) ON DELETE CASCADE
+        )
+      ''');
+    }
   }
 
   // --- Task Methods ---
@@ -139,6 +166,40 @@ class DatabaseHelper {
     final db = await instance.database;
     final List<Map<String, dynamic>> result = await db.query('flashcards', distinct: true, columns: ['subject']);
     return result.map((map) => map['subject'] as String).toList();
+  }
+
+  // --- TimeTable Methods ---
+  Future<void> insertTimeTableWithSlots(TimeTableModel timetable, List<Map<String, dynamic>> slots) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      int timetableId = await txn.insert('timetables', timetable.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      for (var slot in slots) {
+        slot['timetableId'] = timetableId;
+        await txn.insert('time_slots', slot);
+      }
+    });
+  }
+
+  Future<List<TimeTableModel>> getAllTimeTablesWithSlots() async {
+    final db = await instance.database;
+    final List<Map<String, dynamic>> timetableMaps = await db.query('timetables', orderBy: 'id DESC');
+    
+    List<TimeTableModel> timetables = [];
+    for (var timetableMap in timetableMaps) {
+      final List<Map<String, dynamic>> slotMaps = await db.query('time_slots', where: 'timetableId = ?', whereArgs: [timetableMap['id']]);
+      List<TimeSlotModel> slots = slotMaps.map((slotMap) => TimeSlotModel.fromMap(slotMap)).toList();
+      timetables.add(TimeTableModel(
+        id: timetableMap['id'],
+        title: timetableMap['title'],
+        slots: slots
+      ));
+    }
+    return timetables;
+  }
+
+  Future<int> deleteTimeTable(int id) async {
+    final db = await instance.database;
+    return await db.delete('timetables', where: 'id = ?', whereArgs: [id]);
   }
 
   Future close() async {
