@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chetegram/models/task_model.dart';
 import 'package:chetegram/models/flashcard_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final _user = FirebaseAuth.instance.currentUser;
 
   // --- User Profile Methods ---
 
@@ -32,9 +34,8 @@ class FirestoreService {
 
   Future<DocumentSnapshot?> getUserProfile() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return null;
-      return await _db.collection('users').doc(user.uid).get();
+      if (_user == null) return null;
+      return await _db.collection('users').doc(_user!.uid).get();
     } catch (e) {
       print('Error getting user profile: $e');
       return null;
@@ -49,6 +50,63 @@ class FirestoreService {
     }
   }
 
+  // --- Subject/Topic Methods ---
+
+  Future<List<String>> getSubjects() async {
+    try {
+      final snapshot = await _db.collection('subjects').get();
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      print(e);
+      return [];
+    }
+  }
+
+  Future<List<String>> getTopicsForSubject(String subject) async {
+    try {
+      final snapshot = await _db.collection('subjects').doc(subject).collection('topics').get();
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      print(e);
+      return [];
+    }
+  }
+
+  // --- Task Methods ---
+
+  CollectionReference get _tasksCollection {
+    if (_user == null) throw Exception('User not logged in');
+    return _db.collection('users').doc(_user!.uid).collection('tasks');
+  }
+
+  Future<void> addTask(Task task) async {
+    try {
+      await _tasksCollection.add(task.toMap());
+    } catch (e) {
+      print('Error adding task: $e');
+    }
+  }
+
+  Future<void> updateTask(Task task) async {
+    try {
+      await _tasksCollection.doc(task.id).update(task.toMap());
+    } catch (e) {
+      print('Error updating task: $e');
+    }
+  }
+
+  Future<void> deleteTask(String taskId) async {
+    try {
+      await _tasksCollection.doc(taskId).delete();
+    } catch (e) {
+      print('Error deleting task: $e');
+    }
+  }
+
+  Stream<QuerySnapshot> getTasksStream() {
+    return _tasksCollection.orderBy('nextRevisionDate', descending: false).snapshots();
+  }
+  
   // --- Flashcard Methods ---
 
   Future<void> addFlashcard(Flashcard flashcard) async {
