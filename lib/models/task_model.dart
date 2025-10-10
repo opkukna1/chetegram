@@ -2,40 +2,42 @@ class Task {
   final int? id;
   final String subject;
   final String topic;
-  final String revision;
-  final String nextRevisionDate;
-  final bool isDone;
+  int readingStage; // पहले 'revision' (String) था, अब 'readingStage' (int) है
+  DateTime nextRevisionDate;
+  String status; // 'pending', 'completed_today', etc.
 
   Task({
     this.id,
     required this.subject,
     required this.topic,
-    required this.revision,
+    this.readingStage = 1,
     required this.nextRevisionDate,
-    required this.isDone,
+    this.status = 'pending',
   });
 
-  // Convert a Task object into a Map object
+  // डेटाबेस में सेव करने के लिए Map में बदलना
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'subject': subject,
       'topic': topic,
-      'revision': revision,
-      'nextRevisionDate': nextRevisionDate,
-      'isDone': isDone ? 1 : 0, // SQLite doesn't have a boolean type (0=false, 1=true)
+      'readingStage': readingStage,
+      // DateTime को स्ट्रिंग में सेव करेंगे (ISO 8601 format)
+      'nextRevisionDate': nextRevisionDate.toIso8601String(),
+      'status': status,
     };
   }
 
-  // Create a Task object from a Map object
+  // डेटाबेस से आए Map को Task ऑब्जेक्ट में बदलना
   factory Task.fromMap(Map<String, dynamic> map) {
     return Task(
       id: map['id'],
       subject: map['subject'],
       topic: map['topic'],
-      revision: map['revision'],
-      nextRevisionDate: map['nextRevisionDate'],
-      isDone: map['isDone'] == 1,
+      readingStage: map['readingStage'],
+      // स्ट्रिंग को वापस DateTime में बदलेंगे
+      nextRevisionDate: DateTime.parse(map['nextRevisionDate']),
+      status: map['status'],
     );
   }
 }
