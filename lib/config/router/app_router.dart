@@ -2,6 +2,7 @@ import 'package:chetegram/models/flashcard_model.dart';
 import 'package:chetegram/models/task_model.dart';
 import 'package:chetegram/screens/add_flashcard_screen.dart';
 import 'package:chetegram/screens/add_task_screen.dart';
+import 'package:chetegram/screens/add_timetable_screen.dart';
 import 'package:chetegram/screens/analytics_screen.dart';
 import 'package:chetegram/screens/edit_task_screen.dart';
 import 'package:chetegram/screens/flashcard_viewer_screen.dart';
@@ -28,6 +29,10 @@ final goRouter = GoRouter(
     GoRoute(
       path: '/add-flashcard',
       builder: (context, state) => const AddFlashcardScreen(),
+    ),
+     GoRoute(
+      path: '/add-timetable',
+      builder: (context, state) => const AddTimeTableScreen(),
     ),
     GoRoute(
       path: '/flashcard-viewer',
