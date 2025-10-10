@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // नया यूज़र बनाने पर उसकी प्रोफाइल Firestore में सेव करने का फंक्शन
   Future<void> createUserProfile({
     required String uid,
     required String name,
@@ -14,7 +14,10 @@ class FirestoreService {
         'uid': uid,
         'name': name,
         'email': email,
-        'profilePicUrl': '', // भविष्य के लिए
+        'bio': '',
+        'location': '',
+        'profilePicUrl': '',
+        'coverPhotoUrl': '',
         'followersCount': 0,
         'followingCount': 0,
         'createdAt': FieldValue.serverTimestamp(),
@@ -24,5 +27,22 @@ class FirestoreService {
     }
   }
 
-  // भविष्य में हम यहाँ और फंक्शन जोड़ेंगे (जैसे getTasks, addFlashcard, etc.)
+  Future<DocumentSnapshot?> getUserProfile() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+      return await _db.collection('users').doc(user.uid).get();
+    } catch (e) {
+      print('Error getting user profile: $e');
+      return null;
+    }
+  }
+
+  Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
+    try {
+      await _db.collection('users').doc(uid).update(data);
+    } catch (e) {
+      print("Error updating profile: $e");
+    }
+  }
 }
