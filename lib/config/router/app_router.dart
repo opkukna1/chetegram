@@ -1,22 +1,23 @@
 import 'package:chetegram/models/flashcard_model.dart';
 import 'package:chetegram/models/task_model.dart';
 import 'package:chetegram/screens/add_flashcard_screen.dart';
-import 'package:chetegram/screens/add_task_screen.dart';
-import 'package:chetegram/screens/add_timetable_screen.dart';
-import 'package:chetegram/screens/analytics_screen.dart';
-import 'package:chetegram/screens/auth/login_screen.dart';
-import 'package:chetegram/screens/auth/signup_screen.dart';
-import 'package:chetegram/screens/edit_task_screen.dart';
-import 'package:chetegram/screens/flashcard_viewer_screen.dart';
-import 'package:chetegram/screens/flashcards_screen.dart';
-import 'package:chetegram/screens/home_screen.dart';
-import 'package:chetegram/screens/main_screen.dart';
-import 'package:chetegram/screens/profile/edit_profile_screen.dart';
-import 'package:chetegram/screens/profile_screen.dart';
-import 'package:chetegram/screens/timetable_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package.chetegram/screens/add_task_screen.dart';
+import 'package.chetegram/screens/add_timetable_screen.dart';
+import 'package.chetegram/screens/analytics_screen.dart';
+import 'package.chetegram/screens/auth/login_screen.dart';
+import 'package.chetegram/screens/auth/signup_screen.dart';
+import 'package.chetegram/screens/edit_task_screen.dart';
+import 'package.chetegram/screens/flashcard_viewer_screen.dart';
+import 'package.chetegram/screens/flashcards_screen.dart';
+import 'package.chetegram/screens/home_screen.dart';
+import 'package.chetegram/screens/main_screen.dart';
+import 'package.chetegram/screens/profile/edit_profile_screen.dart';
+import 'package.chetegram/screens/profile/user_search_screen.dart';
+import 'package.chetegram/screens/profile_screen.dart';
+import 'package.chetegram/screens/timetable_screen.dart';
+import 'package.firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package.go_router/go_router.dart';
 
 // Private navigators
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -25,22 +26,19 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 final goRouter = GoRouter(
   initialLocation: '/login', // ऐप अब लॉग इन स्क्रीन से शुरू होगा
   navigatorKey: _rootNavigatorKey,
-  // Redirect लॉजिक: यह चेक करेगा कि यूज़र लॉग इन है या नहीं
   redirect: (BuildContext context, GoRouterState state) {
     final bool loggedIn = FirebaseAuth.instance.currentUser != null;
     final bool loggingIn = state.uri.toString() == '/login' || state.uri.toString() == '/signup';
 
     if (!loggedIn) {
-      // अगर लॉग इन नहीं है, तो लॉग इन या साइन अप स्क्रीन पर ही रहने दें
       return loggingIn ? null : '/login';
     }
 
     if (loggingIn) {
-      // अगर लॉग इन है और लॉग इन/साइन अप पेज पर जाने की कोशिश कर रहा है, तो होम पर भेज दें
       return '/home';
     }
 
-    return null; // कोई बदलाव नहीं
+    return null;
   },
   routes: [
     // Auth Routes
@@ -86,6 +84,10 @@ final goRouter = GoRouter(
       path: '/edit-profile',
       builder: (context, state) => const EditProfileScreen(),
     ),
+    GoRoute(
+      path: '/search',
+      builder: (context, state) => const UserSearchScreen(),
+    ),
     
     // Main App Shell
     ShellRoute(
@@ -111,8 +113,11 @@ final goRouter = GoRouter(
           builder: (context, state) => const AnalyticsScreen(),
         ),
         GoRoute(
-          path: '/profile',
-          builder: (context, state) => const ProfileScreen(),
+          path: '/profile/:userId', // प्रोफाइल रूट अब userId लेता है
+          builder: (context, state) {
+            final userId = state.pathParameters['userId'];
+            return ProfileScreen(userId: userId);
+          },
         ),
       ],
     ),
