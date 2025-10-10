@@ -8,120 +8,76 @@ class FirestoreService {
   final _user = FirebaseAuth.instance.currentUser;
 
   // --- User Profile Methods ---
+  // ... (createUserProfile, updateUserProfile functions yahaan hain)
 
-  Future<void> createUserProfile({
-    required String uid,
-    required String name,
-    required String email,
-  }) async {
+  // getUserProfile function ko thoda badlein taaki yeh kisi bhi user ka data la sake
+  Future<DocumentSnapshot?> getUserProfile(String? uid) async {
     try {
-      await _db.collection('users').doc(uid).set({
-        'uid': uid,
-        'name': name,
-        'email': email,
-        'bio': '',
-        'location': '',
-        'profilePicUrl': '',
-        'coverPhotoUrl': '',
-        'followersCount': 0,
-        'followingCount': 0,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      print('Error creating user profile: $e');
-    }
-  }
-
-  Future<DocumentSnapshot?> getUserProfile() async {
-    try {
-      if (_user == null) return null;
-      return await _db.collection('users').doc(_user!.uid).get();
+      String userId = uid ?? _user!.uid;
+      return await _db.collection('users').doc(userId).get();
     } catch (e) {
       print('Error getting user profile: $e');
       return null;
     }
   }
 
-  Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
+  // नया फंक्शन: नाम से यूज़र सर्च करने के लिए
+  Future<List<QueryDocumentSnapshot>> searchUsers(String name) async {
     try {
-      await _db.collection('users').doc(uid).update(data);
+      if (name.isEmpty) return [];
+      final result = await _db
+          .collection('users')
+          .where('name', isGreaterThanOrEqualTo: name)
+          .where('name', isLessThanOrEqualTo: '$name\uf8ff')
+          .limit(10)
+          .get();
+      return result.docs;
     } catch (e) {
-      print("Error updating profile: $e");
-    }
-  }
-
-  // --- Subject/Topic Methods ---
-
-  Future<List<String>> getSubjects() async {
-    try {
-      final snapshot = await _db.collection('subjects').get();
-      return snapshot.docs.map((doc) => doc.id).toList();
-    } catch (e) {
-      print(e);
+      print('Error searching users: $e');
       return [];
     }
   }
 
-  Future<List<String>> getTopicsForSubject(String subject) async {
-    try {
-      final snapshot = await _db.collection('subjects').doc(subject).collection('topics').get();
-      return snapshot.docs.map((doc) => doc.id).toList();
-    } catch (e) {
-      print(e);
-      return [];
-    }
+  // नया फंक्शन: किसी यूज़र को फॉलो करने के लिए
+  Future<void> followUser(String otherUserId) async {
+    if (_user == null) return;
+    final currentUserRef = _db.collection('users').doc(_user!.uid);
+    final otherUserRef = _db.collection('users').doc(otherUserId);
+
+    final batch = _db.batch();
+    // Apni following list mein doosre user ko add karein
+    batch.set(currentUserRef.collection('following').doc(otherUserId), {});
+    // Doosre user ki followers list mein khud ko add karein
+    batch.set(otherUserRef.collection('followers').doc(_user!.uid), {});
+    // Apni following count badhayein
+    batch.update(currentUserRef, {'followingCount': FieldValue.increment(1)});
+    // Doosre user ki followers count badhayein
+    batch.update(otherUserRef, {'followersCount': FieldValue.increment(1)});
+    
+    await batch.commit();
   }
 
-  // --- Task Methods ---
+  // नया फंक्शन: किसी यूज़र को अनफॉलो करने के लिए
+  Future<void> unfollowUser(String otherUserId) async {
+     if (_user == null) return;
+    final currentUserRef = _db.collection('users').doc(_user!.uid);
+    final otherUserRef = _db.collection('users').doc(otherUserId);
 
-  CollectionReference get _tasksCollection {
-    if (_user == null) throw Exception('User not logged in');
-    return _db.collection('users').doc(_user!.uid).collection('tasks');
+    final batch = _db.batch();
+    batch.delete(currentUserRef.collection('following').doc(otherUserId));
+    batch.delete(otherUserRef.collection('followers').doc(_user!.uid));
+    batch.update(currentUserRef, {'followingCount': FieldValue.increment(-1)});
+    batch.update(otherUserRef, {'followersCount': FieldValue.increment(-1)});
+
+    await batch.commit();
   }
 
-  Future<void> addTask(Task task) async {
-    try {
-      await _tasksCollection.add(task.toMap());
-    } catch (e) {
-      print('Error adding task: $e');
-    }
+  // नया फंक्शन: यह चेक करने के लिए कि क्या आप किसी को फॉलो कर रहे हैं
+  Future<bool> isFollowing(String otherUserId) async {
+    if (_user == null) return false;
+    final doc = await _db.collection('users').doc(_user!.uid).collection('following').doc(otherUserId).get();
+    return doc.exists;
   }
 
-  Future<void> updateTask(Task task) async {
-    try {
-      await _tasksCollection.doc(task.id).update(task.toMap());
-    } catch (e) {
-      print('Error updating task: $e');
-    }
-  }
-
-  Future<void> deleteTask(String taskId) async {
-    try {
-      await _tasksCollection.doc(taskId).delete();
-    } catch (e) {
-      print('Error deleting task: $e');
-    }
-  }
-
-  Stream<QuerySnapshot> getTasksStream() {
-    return _tasksCollection.orderBy('nextRevisionDate', descending: false).snapshots();
-  }
-  
-  // --- Flashcard Methods ---
-
-  Future<void> addFlashcard(Flashcard flashcard) async {
-    try {
-      await _db.collection('flashcards').add(flashcard.toMap());
-    } catch (e) {
-      print('Error adding flashcard: $e');
-    }
-  }
-
-  Stream<QuerySnapshot> getFlashcardsStream() {
-    return _db
-        .collection('flashcards')
-        .where('isPublic', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
-        .snapshots();
-  }
+  // ... (बाकी के सभी Functions: Subjects, Tasks, Flashcards)
 }
