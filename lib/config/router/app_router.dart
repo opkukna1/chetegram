@@ -1,3 +1,4 @@
+import 'package:chetegram/screens/add_task_screen.dart';
 import 'package:chetegram/screens/analytics_screen.dart';
 import 'package:chetegram/screens/flashcards_screen.dart';
 import 'package:chetegram/screens/home_screen.dart';
@@ -15,6 +16,13 @@ final goRouter = GoRouter(
   initialLocation: '/home',
   navigatorKey: _rootNavigatorKey,
   routes: [
+    // This route is for the Add Task screen. It's outside the ShellRoute
+    // so it covers the whole screen, including the bottom navigation bar.
+    GoRoute(
+      path: '/add-task',
+      builder: (context, state) => const AddTaskScreen(),
+    ),
+    
     // This ShellRoute builds the UI with the BottomNavigationBar
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
