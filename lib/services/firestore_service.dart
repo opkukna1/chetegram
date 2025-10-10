@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chetegram/models/flashcard_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  // --- User Profile Methods ---
 
   Future<void> createUserProfile({
     required String uid,
@@ -44,5 +47,23 @@ class FirestoreService {
     } catch (e) {
       print("Error updating profile: $e");
     }
+  }
+
+  // --- Flashcard Methods ---
+
+  Future<void> addFlashcard(Flashcard flashcard) async {
+    try {
+      await _db.collection('flashcards').add(flashcard.toMap());
+    } catch (e) {
+      print('Error adding flashcard: $e');
+    }
+  }
+
+  Stream<QuerySnapshot> getFlashcardsStream() {
+    return _db
+        .collection('flashcards')
+        .where('isPublic', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
   }
 }
