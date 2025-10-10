@@ -16,7 +16,7 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    // वर्जन 1 से 2 कर दिया गया है और onUpgrade जोड़ा गया है
+    // वर्जन 2 पर सेट है और onUpgrade जोड़ा गया है
     return await openDatabase(path, version: 2, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
@@ -29,12 +29,19 @@ class DatabaseHelper {
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       // वर्जन 2 के बदलाव: tasks टेबल में नए कॉलम जोड़ना
-      await db.execute("ALTER TABLE tasks ADD COLUMN readingStage INTEGER DEFAULT 1");
-      await db.execute("ALTER TABLE tasks ADD COLUMN lastReadDate TEXT");
-      // पुराने 'nextRevisionDate' कॉलम का नाम बदलें और नया बनाएं
-      await db.execute("ALTER TABLE tasks RENAME COLUMN nextRevisionDate TO old_nextRevisionDate");
-      await db.execute("ALTER TABLE tasks ADD COLUMN nextRevisionDate TEXT");
-      await db.execute("ALTER TABLE tasks ADD COLUMN status TEXT DEFAULT 'pending'");
+      // यह सुनिश्चित करने के लिए कि ALTER तभी चले जब कॉलम मौजूद न हो (बेहतर प्रैक्टिस)
+      var tableInfo = await db.rawQuery('PRAGMA table_info(tasks)');
+      List<String> columnNames = tableInfo.map((row) => row['name'] as String).toList();
+      
+      if (!columnNames.contains('readingStage')) {
+        await db.execute("ALTER TABLE tasks ADD COLUMN readingStage INTEGER DEFAULT 1");
+      }
+      if (!columnNames.contains('nextRevisionDate')) {
+        await db.execute("ALTER TABLE tasks ADD COLUMN nextRevisionDate TEXT");
+      }
+      if (!columnNames.contains('status')) {
+         await db.execute("ALTER TABLE tasks ADD COLUMN status TEXT DEFAULT 'pending'");
+      }
     }
   }
 
@@ -73,27 +80,40 @@ class DatabaseHelper {
     return await db.query('tasks', orderBy: 'id DESC');
   }
 
-  // नया मेथड: किसी टास्क को अपडेट करने के लिए
   Future<int> updateTask(Map<String, dynamic> row) async {
     Database db = await instance.database;
     int id = row['id'];
     return await db.update('tasks', row, where: 'id = ?', whereArgs: [id]);
   }
   
-  // नया मेथड: सिर्फ आज के रिविजन वाले टास्क लाने के लिए
   Future<List<Map<String, dynamic>>> getTodaysTasks() async {
     Database db = await instance.database;
-    // आज की तारीख (बिना टाइम के)
     DateTime now = DateTime.now();
     String today = DateTime(now.year, now.month, now.day).toIso8601String();
     
-    // सिर्फ वो टास्क लाओ जिनकी रिविजन डेट आज या उससे पहले की है और स्टेटस pending है
     return await db.query(
       'tasks',
       where: "nextRevisionDate <= ? AND status = 'pending'",
       whereArgs: [today],
       orderBy: 'nextRevisionDate ASC',
     );
+  }
+  
+  // --- Analytics Methods ---
+  Future<int> getTasksCount() async {
+    final db = await instance.database;
+    final result = await db.rawQuery('SELECT COUNT(*) FROM tasks');
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<List<Map<String, dynamic>>> getTasksByStage(int stage) async {
+    final db = await instance.database;
+    return await db.query('tasks', where: 'readingStage = ?', whereArgs: [stage]);
+  }
+
+  Future<List<Map<String, dynamic>>> getCompletedTasks() async {
+    final db = await instance.database;
+    return await db.query('tasks', where: 'status = ?', whereArgs: ['completed']);
   }
 
   // --- Flashcard Methods ---
