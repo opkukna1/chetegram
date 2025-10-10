@@ -56,7 +56,6 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
   }
 
   Color _hexToColor(String hexString) {
-    // ... (यह फंक्शन वैसा ही रहेगा)
     final buffer = StringBuffer();
     if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
     buffer.write(hexString.replaceFirst('#', ''));
@@ -78,7 +77,6 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
       body: FutureBuilder<List<Flashcard>>(
         future: _flashcardsFuture,
         builder: (context, snapshot) {
-          // ... (FutureBuilder का बाकी हिस्सा वैसा ही रहेगा)
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -97,25 +95,31 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
             itemCount: flashcards.length,
             itemBuilder: (context, index) {
               final card = flashcards[index];
-              return GestureDetector( // कार्ड पर क्लिक करने के लिए
+              return GestureDetector(
                 onTap: () {
-                  // फुल-स्क्रीन व्यूअर पर नेविगेट करें
                   context.push('/flashcard-viewer', extra: {'flashcards': flashcards, 'index': index});
                 },
                 child: Card(
                   color: _hexToColor(card.colorHex),
+                  clipBehavior: Clip.antiAlias, // यह सुनिश्चित करेगा कि कुछ भी कार्ड से बाहर न जाए
                   child: Padding(
-                    // ... (कार्ड का UI वैसा ही रहेगा)
-                     padding: const EdgeInsets.all(12.0),
+                    padding: const EdgeInsets.all(12.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(card.subject, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(card.subject, style: const TextStyle(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 4),
-                        Text(card.topic, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                        const Spacer(),
-                        Center(child: Text(card.frontText, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16))),
-                        const Spacer(),
+                        Text(card.topic, style: const TextStyle(fontSize: 12, color: Colors.black54), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 8),
+                        Expanded( // यह विजेट बची हुई जगह ले लेगा
+                          child: Text(
+                            card.frontText,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 16),
+                            overflow: TextOverflow.ellipsis, // लंबे टेक्स्ट के आगे '...' लगा देगा
+                            maxLines: 4, // अधिकतम 4 लाइनें दिखाएगा
+                          ),
+                        ),
                       ],
                     ),
                   ),
