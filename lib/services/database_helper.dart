@@ -2,7 +2,6 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 class DatabaseHelper {
-  // Singleton pattern to ensure only one instance of the database is created
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
   DatabaseHelper._init();
@@ -21,39 +20,55 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
-    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
-    const textType = 'TEXT NOT NULL';
-    const intType = 'INTEGER NOT NULL';
-
+    // --- Tasks Table ---
     await db.execute('''
       CREATE TABLE tasks (
-        id $idType,
-        subject $textType,
-        topic $textType,
-        revision $textType,
-        nextRevisionDate $textType,
-        isDone $intType
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subject TEXT NOT NULL,
+        topic TEXT NOT NULL,
+        revision TEXT NOT NULL,
+        nextRevisionDate TEXT NOT NULL,
+        isDone INTEGER NOT NULL
+      )
+    ''');
+
+    // --- NEW: Flashcards Table ---
+    await db.execute('''
+      CREATE TABLE flashcards (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subject TEXT NOT NULL,
+        topic TEXT NOT NULL,
+        frontText TEXT NOT NULL,
+        backText TEXT NOT NULL,
+        colorHex TEXT NOT NULL
       )
     ''');
   }
 
-  // Example: Insert a task
+  // --- Task Methods ---
   Future<int> insertTask(Map<String, dynamic> row) async {
     Database db = await instance.database;
     return await db.insert('tasks', row);
   }
 
-  // Example: Get all tasks
   Future<List<Map<String, dynamic>>> getAllTasks() async {
     Database db = await instance.database;
     return await db.query('tasks', orderBy: 'id DESC');
   }
-  
-  // We can add update and delete methods later
-  
+
+  // --- NEW: Flashcard Methods ---
+  Future<int> insertFlashcard(Map<String, dynamic> row) async {
+    Database db = await instance.database;
+    return await db.insert('flashcards', row);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllFlashcards() async {
+    Database db = await instance.database;
+    return await db.query('flashcards', orderBy: 'id DESC');
+  }
+
   Future close() async {
     final db = await instance.database;
     db.close();
   }
 }
-
