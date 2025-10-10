@@ -12,6 +12,7 @@ class FlashcardsScreen extends StatefulWidget {
 
 class _FlashcardsScreenState extends State<FlashcardsScreen> {
   late Future<List<Flashcard>> _flashcardsFuture;
+  String? _selectedSubjectFilter;
 
   @override
   void initState() {
@@ -21,13 +22,41 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
 
   void _refreshFlashcards() {
     setState(() {
-      _flashcardsFuture = DatabaseHelper.instance.getAllFlashcards().then(
-            (maps) => maps.map((map) => Flashcard.fromMap(map)).toList(),
-      );
+      _flashcardsFuture = DatabaseHelper.instance
+          .getFilteredFlashcards(subject: _selectedSubjectFilter)
+          .then((maps) => maps.map((map) => Flashcard.fromMap(map)).toList());
     });
   }
 
+  void _showFilterDialog() async {
+    final subjects = await DatabaseHelper.instance.getUniqueSubjects();
+    subjects.insert(0, 'All'); // सबसे ऊपर 'All' का ऑप्शन जोड़ें
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return ListView.builder(
+          itemCount: subjects.length,
+          itemBuilder: (context, index) {
+            final subject = subjects[index];
+            return ListTile(
+              title: Text(subject),
+              onTap: () {
+                setState(() {
+                  _selectedSubjectFilter = (subject == 'All') ? null : subject;
+                });
+                _refreshFlashcards();
+                Navigator.pop(context);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
   Color _hexToColor(String hexString) {
+    // ... (यह फंक्शन वैसा ही रहेगा)
     final buffer = StringBuffer();
     if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
     buffer.write(hexString.replaceFirst('#', ''));
@@ -38,12 +67,18 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Flashcards ✨'),
-        actions: [IconButton(onPressed: () {}, icon: const Icon(Icons.search))],
+        title: Text(_selectedSubjectFilter ?? 'All Flashcards'),
+        actions: [
+          IconButton(
+            onPressed: _showFilterDialog,
+            icon: const Icon(Icons.filter_list),
+          ),
+        ],
       ),
       body: FutureBuilder<List<Flashcard>>(
         future: _flashcardsFuture,
         builder: (context, snapshot) {
+          // ... (FutureBuilder का बाकी हिस्सा वैसा ही रहेगा)
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -62,20 +97,27 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
             itemCount: flashcards.length,
             itemBuilder: (context, index) {
               final card = flashcards[index];
-              return Card(
-                color: _hexToColor(card.colorHex),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(card.subject, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text(card.topic, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                      const Spacer(),
-                      Center(child: Text(card.frontText, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16))),
-                      const Spacer(),
-                    ],
+              return GestureDetector( // कार्ड पर क्लिक करने के लिए
+                onTap: () {
+                  // फुल-स्क्रीन व्यूअर पर नेविगेट करें
+                  context.push('/flashcard-viewer', extra: {'flashcards': flashcards, 'index': index});
+                },
+                child: Card(
+                  color: _hexToColor(card.colorHex),
+                  child: Padding(
+                    // ... (कार्ड का UI वैसा ही रहेगा)
+                     padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(card.subject, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Text(card.topic, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        const Spacer(),
+                        Center(child: Text(card.frontText, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16))),
+                        const Spacer(),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -85,7 +127,6 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // यहाँ context.go को context.push से बदल दिया गया है
           context.push('/add-flashcard').then((_) => _refreshFlashcards());
         },
         child: const Icon(Icons.add),
