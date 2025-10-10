@@ -1,12 +1,13 @@
 buildscript {
-    ext.kotlin_version = '2.0.0' // वर्जन यहाँ अपडेट किया गया है
+    ext.kotlin_version = '2.0.0'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.4.1' // वर्जन यहाँ भी अपडेट किया गया है
+        // AGP का वर्जन यहाँ अपडेट किया गया है
+        classpath 'com.android.tools.build:gradle:8.4.1' 
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -29,4 +30,3 @@ subprojects {
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
-
