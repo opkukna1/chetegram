@@ -2,7 +2,6 @@ import 'package:chetegram/models/flashcard_model.dart';
 import 'package:chetegram/services/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_flutter/lucide_flutter.dart';
 
 class FlashcardsScreen extends StatefulWidget {
   const FlashcardsScreen({super.key});
@@ -40,7 +39,7 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Flashcards ✨'),
-        actions: [IconButton(onPressed: () {}, icon: const Icon(LucideIcons.search))],
+        actions: [IconButton(onPressed: () {}, icon: const Icon(Icons.search))],
       ),
       body: FutureBuilder<List<Flashcard>>(
         future: _flashcardsFuture,
@@ -85,8 +84,11 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/add-flashcard').then((_) => _refreshFlashcards()),
-        child: const Icon(LucideIcons.plus),
+        onPressed: () async {
+          await context.go('/add-flashcard');
+          _refreshFlashcards();
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }
