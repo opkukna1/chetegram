@@ -1,39 +1,65 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Flashcard {
-  final int? id;
+  final String? id; // Document ID from Firestore
+  final String creatorId;
+  final String creatorName; // Denormalized for easy access
+  final String creatorPicUrl; // Denormalized for easy access
   final String subject;
   final String topic;
   final String frontText;
   final String backText;
   final String colorHex;
+  final bool isPublic;
+  final int likeCount;
+  final Timestamp createdAt;
 
   Flashcard({
     this.id,
+    required this.creatorId,
+    required this.creatorName,
+    required this.creatorPicUrl,
     required this.subject,
     required this.topic,
     required this.frontText,
     required this.backText,
     required this.colorHex,
+    required this.isPublic,
+    this.likeCount = 0,
+    required this.createdAt,
   });
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      'creatorId': creatorId,
+      'creatorName': creatorName,
+      'creatorPicUrl': creatorPicUrl,
       'subject': subject,
       'topic': topic,
       'frontText': frontText,
       'backText': backText,
       'colorHex': colorHex,
+      'isPublic': isPublic,
+      'likeCount': likeCount,
+      'createdAt': createdAt,
     };
   }
 
-  factory Flashcard.fromMap(Map<String, dynamic> map) {
+  factory Flashcard.fromFirestore(DocumentSnapshot doc) {
+    Map data = doc.data() as Map<String, dynamic>;
     return Flashcard(
-      id: map['id'],
-      subject: map['subject'],
-      topic: map['topic'],
-      frontText: map['frontText'],
-      backText: map['backText'],
-      colorHex: map['colorHex'],
+      id: doc.id,
+      creatorId: data['creatorId'] ?? '',
+      creatorName: data['creatorName'] ?? '',
+      creatorPicUrl: data['creatorPicUrl'] ?? '',
+      subject: data['subject'] ?? '',
+      topic: data['topic'] ?? '',
+      frontText: data['frontText'] ?? '',
+      backText: data['backText'] ?? '',
+      colorHex: data['colorHex'] ?? '#FFFFFF',
+      isPublic: data['isPublic'] ?? false,
+      likeCount: data['likeCount'] ?? 0,
+      createdAt: data['createdAt'] ?? Timestamp.now(),
     );
   }
 }
