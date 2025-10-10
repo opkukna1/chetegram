@@ -1,0 +1,34 @@
+name: Regenerate Project Files
+
+on:
+  push:
+    paths:
+      - '.github/workflows/regenerate_project.yml' # यह सिर्फ तभी चलेगा जब यह फाइल बनेगी
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+
+    # ये परमिशन्स वर्कफ़्लो को आपके कोड में बदलाव सेव करने की इजाजत देंगी
+    permissions:
+      contents: write
+
+    steps:
+      - name: 1. Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 2. Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: 3. Run 'flutter create .' to build native folders
+        run: flutter create .
+
+      - name: 4. Commit and push the generated files
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions-bot@github.com'
+          git add .
+          git commit -m "feat: regenerate native project files via workflow"
+          git push
