@@ -20,6 +20,7 @@ class FlashcardViewerScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
+      backgroundColor: Colors.grey[100], // हल्का बैकग्राउंड कलर
       body: PageView.builder(
         controller: controller,
         itemCount: flashcards.length,
@@ -33,20 +34,45 @@ class FlashcardViewerScreen extends StatelessWidget {
             child: Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              clipBehavior: Clip.antiAlias, // इमेज को कोनों पर क्लिप करने के लिए
               child: SingleChildScrollView( // लंबे कंटेंट के लिए स्क्रॉलिंग
-                padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- मुख्य टाइटल (Front Text से) ---
-                    Text(
-                      card.frontText,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 24),
+                    // --- Image (अगर है तो) ---
+                    if (card.imageUrl.isNotEmpty)
+                      Image.network(
+                        card.imageUrl,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        // लोडिंग इंडिकेटर
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const SizedBox(
+                            height: 200,
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        },
+                      ),
                     
-                    // --- पॉइंट्स की लिस्ट (Back Text से) ---
-                    ...points.map((point) => _buildPointRow(point.trim(), context)).toList(),
+                    Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // --- मुख्य टाइटल (Front Text से) ---
+                          Text(
+                            card.frontText,
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // --- पॉइंट्स की लिस्ट (Back Text से) ---
+                          ...points.map((point) => _buildPointRow(point.trim(), context)).toList(),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -76,11 +102,11 @@ class FlashcardViewerScreen extends StatelessWidget {
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 16),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 16, color: Colors.black87),
                 children: [
                   TextSpan(
                     text: '$key: ',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
                   ),
                   TextSpan(text: value),
                 ],
