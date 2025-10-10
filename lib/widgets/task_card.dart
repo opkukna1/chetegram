@@ -3,17 +3,19 @@ import 'package:flutter/material.dart';
 class TaskCard extends StatelessWidget {
   final String subject;
   final String topic;
-  final String revision;
+  final String revisionText; // 'revision' का नाम बदलकर 'revisionText' कर दिया
   final String nextRevision;
   final bool isDone;
+  final Function(bool?)? onMarkAsDone; // क्लिक को हैंडल करने के लिए नया फंक्शन
 
   const TaskCard({
     super.key,
     required this.subject,
     required this.topic,
-    required this.revision,
+    required this.revisionText,
     required this.nextRevision,
     this.isDone = false,
+    this.onMarkAsDone, // कंस्ट्रक्टर में जोड़ा गया
   });
 
   @override
@@ -28,7 +30,6 @@ class TaskCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Subject and Revision Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -40,54 +41,34 @@ class TaskCard extends StatelessWidget {
                         ),
                         child: Text(
                           subject,
-                          style: const TextStyle(
-                            color: Colors.blueAccent,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
+                          style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                       ),
                       Text(
-                        revision,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
+                        revisionText, // 'revision' की जगह 'revisionText'
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-
-                  // Topic Text
                   Text(
                     topic,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                   const SizedBox(height: 8),
-
-                  // Next Revision Text
                   Text(
-                    'Next Revision: $nextRevision',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade700,
-                    ),
+                    'Next: $nextRevision',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 16),
-            // Checkbox
             Transform.scale(
               scale: 1.5,
               child: Checkbox(
                 value: isDone,
-                onChanged: (bool? value) {
-                  // TODO: Add functionality to update task status
-                },
+                onChanged: onMarkAsDone, // चेकबॉक्स में फंक्शन जोड़ा गया
                 shape: const CircleBorder(),
                 activeColor: Colors.green,
               ),
