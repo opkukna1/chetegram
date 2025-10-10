@@ -1,7 +1,8 @@
 import 'package:chetegram/models/time_slot_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TimeTableModel {
-  final int? id;
+  final String? id; // int? से String? में बदला गया
   final String title;
   final List<TimeSlotModel> slots;
 
@@ -13,15 +14,16 @@ class TimeTableModel {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'title': title,
+      'creatorId': /* FirebaseAuth.instance.currentUser!.uid */, // बाद में जोड़ेंगे
     };
   }
 
-  factory TimeTableModel.fromMap(Map<String, dynamic> map) {
+  factory TimeTableModel.fromFirestore(DocumentSnapshot doc) {
+    Map data = doc.data() as Map<String, dynamic>;
     return TimeTableModel(
-      id: map['id'],
-      title: map['title'],
+      id: doc.id,
+      title: data['title'] ?? '',
     );
   }
 }
