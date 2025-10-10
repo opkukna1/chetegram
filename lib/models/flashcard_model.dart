@@ -1,16 +1,17 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package.cloud_firestore/cloud_firestore.dart';
 
 class Flashcard {
-  final String? id; // Document ID from Firestore
+  final String? id;
   final String creatorId;
-  final String creatorName; // Denormalized for easy access
-  final String creatorPicUrl; // Denormalized for easy access
+  final String creatorName;
+  final String creatorPicUrl;
   final String subject;
   final String topic;
   final String frontText;
   final String backText;
   final String colorHex;
   final bool isPublic;
+  final String imageUrl; // Image ke liye naya field
   final int likeCount;
   final Timestamp createdAt;
 
@@ -25,6 +26,7 @@ class Flashcard {
     required this.backText,
     required this.colorHex,
     required this.isPublic,
+    this.imageUrl = '', // Default value
     this.likeCount = 0,
     required this.createdAt,
   });
@@ -40,6 +42,7 @@ class Flashcard {
       'backText': backText,
       'colorHex': colorHex,
       'isPublic': isPublic,
+      'imageUrl': imageUrl,
       'likeCount': likeCount,
       'createdAt': createdAt,
     };
@@ -58,6 +61,7 @@ class Flashcard {
       backText: data['backText'] ?? '',
       colorHex: data['colorHex'] ?? '#FFFFFF',
       isPublic: data['isPublic'] ?? false,
+      imageUrl: data['imageUrl'] ?? '',
       likeCount: data['likeCount'] ?? 0,
       createdAt: data['createdAt'] ?? Timestamp.now(),
     );
