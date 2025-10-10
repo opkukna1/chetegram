@@ -1,5 +1,4 @@
 import 'package:chetegram/models/flashcard_model.dart';
-import 'package:flip_card/flip_card.dart';
 import 'package:flutter/material.dart';
 
 class FlashcardViewerScreen extends StatelessWidget {
@@ -12,21 +11,12 @@ class FlashcardViewerScreen extends StatelessWidget {
     required this.initialIndex,
   });
 
-  Color _hexToColor(String hexString) {
-    final buffer = StringBuffer();
-    if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
-    buffer.write(hexString.replaceFirst('#', ''));
-    return Color(int.parse(buffer.toString(), radix: 16));
-  }
-
   @override
   Widget build(BuildContext context) {
-    // PageController का उपयोग करके हम यह तय करते हैं कि कौन सा कार्ड पहले दिखेगा
     final PageController controller = PageController(initialPage: initialIndex);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(flashcards[initialIndex].subject),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -35,11 +25,31 @@ class FlashcardViewerScreen extends StatelessWidget {
         itemCount: flashcards.length,
         itemBuilder: (context, index) {
           final card = flashcards[index];
+          // बैक टेक्स्ट को अलग-अलग पॉइंट्स में तोड़ें (सेमीकोलन ';' के आधार पर)
+          final points = card.backText.split(';');
+
           return Padding(
             padding: const EdgeInsets.all(16.0),
-            child: FlipCard(
-              front: _buildCardSide(card.frontText, card.colorHex, context, isFront: true),
-              back: _buildCardSide(card.backText, card.colorHex, context, isFront: false),
+            child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: SingleChildScrollView( // लंबे कंटेंट के लिए स्क्रॉलिंग
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // --- मुख्य टाइटल (Front Text से) ---
+                    Text(
+                      card.frontText,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // --- पॉइंट्स की लिस्ट (Back Text से) ---
+                    ...points.map((point) => _buildPointRow(point.trim(), context)).toList(),
+                  ],
+                ),
+              ),
             ),
           );
         },
@@ -47,28 +57,37 @@ class FlashcardViewerScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCardSide(String text, String colorHex, BuildContext context, {required bool isFront}) {
-    return Card(
-      color: _hexToColor(colorHex),
-      elevation: 8,
-      child: Center(
-        child: SingleChildScrollView( // लंबे टेक्स्ट के लिए स्क्रॉलिंग
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                text,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
+  // हर एक पॉइंट के लिए एक पंक्ति बनाने वाला विजेट
+  Widget _buildPointRow(String point, BuildContext context) {
+    if (point.isEmpty) return const SizedBox.shrink();
+
+    // पॉइंट को ":" के आधार पर की (key) और वैल्यू (value) में तोड़ें
+    final parts = point.split(':');
+    final String key = parts[0];
+    final String value = parts.length > 1 ? parts.sublist(1).join(':').trim() : '';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle, color: Colors.purple, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 16),
+                children: [
+                  TextSpan(
+                    text: '$key: ',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  TextSpan(text: value),
+                ],
               ),
-              if (isFront) ...[
-                const SizedBox(height: 20),
-                const Text("Tap to see answer", style: TextStyle(fontStyle: FontStyle.italic, color: Colors.black54)),
-              ]
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
