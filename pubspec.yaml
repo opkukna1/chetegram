@@ -1,26 +1,36 @@
-name: indiakart
-description: "Indiakart: A hyper-local e-commerce and services app."
-publish_to: 'none' 
+name: chetegram
+description: "A new Flutter project."
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.2.3 <4.0.0'
+  sdk: '>=3.4.3 <4.0.0'
 
-# ... all other dependencies remain the same
+# --- Dependencies Section ---
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^2.27.0
-  firebase_auth: ^4.17.8
-  #...etc
 
+  # Utility Packages
+  cupertino_icons: ^1.0.6
+  lucide_flutter: ^1.408.0     # For Icons
+
+  # Routing
+  go_router: ^14.2.0           # For App Navigation
+
+  # State Management
+  flutter_riverpod: ^2.5.1     # For managing app state
+
+  # Fonts
+  google_fonts: ^6.2.1         # For using Google Fonts easily
+
+
+# --- Developer Dependencies Section ---
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  #...etc
+  flutter_lints: ^3.0.0
 
+# --- Flutter Specific Section ---
 flutter:
   uses-material-design: true
-  assets:
-    - assets/images/
-    - assets/sample_data/
