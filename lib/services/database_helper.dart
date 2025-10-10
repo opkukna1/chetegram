@@ -16,20 +16,15 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    // वर्जन 2 पर सेट है और onUpgrade जोड़ा गया है
     return await openDatabase(path, version: 2, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
-  // यह फंक्शन सिर्फ तब चलेगा जब ऐप पहली बार इंस्टॉल होगा
   Future _createDB(Database db, int version) async {
     await _createTables(db);
   }
 
-  // यह फंक्शन तब चलेगा जब हम DB का वर्जन बढ़ाएंगे
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // वर्जन 2 के बदलाव: tasks टेबल में नए कॉलम जोड़ना
-      // यह सुनिश्चित करने के लिए कि ALTER तभी चले जब कॉलम मौजूद न हो (बेहतर प्रैक्टिस)
       var tableInfo = await db.rawQuery('PRAGMA table_info(tasks)');
       List<String> columnNames = tableInfo.map((row) => row['name'] as String).toList();
       
@@ -125,6 +120,20 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getAllFlashcards() async {
     Database db = await instance.database;
     return await db.query('flashcards', orderBy: 'id DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getFilteredFlashcards({String? subject}) async {
+    final db = await instance.database;
+    if (subject == null || subject == 'All') {
+      return getAllFlashcards();
+    }
+    return await db.query('flashcards', where: 'subject = ?', whereArgs: [subject]);
+  }
+
+  Future<List<String>> getUniqueSubjects() async {
+    final db = await instance.database;
+    final List<Map<String, dynamic>> result = await db.query('flashcards', distinct: true, columns: ['subject']);
+    return result.map((map) => map['subject'] as String).toList();
   }
 
   Future close() async {
