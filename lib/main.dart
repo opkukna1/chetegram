@@ -11,15 +11,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use MaterialApp.router to integrate go_router
     return MaterialApp.router(
-      routerConfig: goRouter, // Pass the router configuration
+      routerConfig: goRouter,
       title: 'Chetegram',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
         useMaterial3: true,
-        // Use Google Fonts for a nice look
         fontFamily: GoogleFonts.poppins().fontFamily,
         scaffoldBackgroundColor: const Color(0xFFF8F9FA),
         appBarTheme: AppBarTheme(
@@ -34,7 +32,7 @@ class MyApp extends StatelessWidget {
           ),
           iconTheme: const IconThemeData(color: Colors.black87),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 2,
           shadowColor: Colors.black12,
           shape: RoundedRectangleBorder(
