@@ -20,9 +20,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       final newTask = Task(
         subject: _subjectController.text,
         topic: _topicController.text,
-        revision: '1st Reading',
-        nextRevisionDate: 'in 1 day',
-        isDone: false,
+        // नए टास्क के लिए nextRevisionDate आज की तारीख होगी
+        nextRevisionDate: DateTime.now(), 
+        readingStage: 1,
+        status: 'pending',
       );
       await DatabaseHelper.instance.insertTask(newTask.toMap());
       if (mounted) {
@@ -41,7 +42,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add New Task')),
+      appBar: AppBar(title: const Text('Add New Topic')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -64,7 +65,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               ElevatedButton(
                 onPressed: _submitTask,
                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16.0), textStyle: const TextStyle(fontSize: 18)),
-                child: const Text('Save Task'),
+                child: const Text('Add Topic'),
               ),
             ],
           ),
