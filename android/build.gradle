@@ -6,7 +6,7 @@ buildscript {
     }
 
     dependencies {
-        // AGP का वर्जन यहाँ अपडेट किया गया है
+        // AGP का वर्जन यहाँ 8.4.1 पर सेट किया गया है
         classpath 'com.android.tools.build:gradle:8.4.1' 
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
