@@ -3,7 +3,7 @@ import 'package:chetegram/services/database_helper.dart';
 import 'package:chetegram/widgets/task_card.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart'; // तारीख फॉर्मेट करने के लिए
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,24 +15,25 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<Task> _todaysTasks = [];
-  List<Task> _stage1Tasks = [];
-  List<Task> _stage2Tasks = [];
-  List<Task> _stage3Tasks = [];
-  List<Task> _stage4Tasks = [];
-  List<Task> _stage5Tasks = [];
+  List<Task> _allTasks = []; // Ab hum saare tasks ko ek hi list mein rakhenge
 
-  // रिवीजन के दिनों का क्रम: 1 दिन, 3 दिन, 7 दिन, 14 दिन, 30 दिन
-  final List<int> revisionIntervals = [1, 3, 7, 14, 30];
+  // Naya Revision Schedule (dinon ka antar)
+  // Stage 1 ke baad -> +1 din
+  // Stage 2 ke baad -> +2 din (total 3)
+  // Stage 3 ke baad -> +4 din (total 7)
+  // Stage 4 ke baad -> +7 din (total 14)
+  // Stage 5 ke baad -> +16 din (total 30)
+  final List<int> revisionIntervals = [1, 2, 4, 7, 16];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 7, vsync: this); // 6 stages + Today's Task
     _refreshAllTasks();
   }
 
   Future<void> _refreshAllTasks() async {
-    final allTasks = (await DatabaseHelper.instance.getAllTasks())
+    final allTasksFromDb = (await DatabaseHelper.instance.getAllTasks())
         .map((map) => Task.fromMap(map))
         .toList();
 
@@ -40,33 +41,67 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     DateTime today = DateTime(now.year, now.month, now.day);
 
     setState(() {
-      _todaysTasks = allTasks.where((task) =>
+      _allTasks = allTasksFromDb;
+      _todaysTasks = _allTasks.where((task) =>
           task.nextRevisionDate.isBefore(today.add(const Duration(days: 1))) &&
           task.status == 'pending').toList();
-
-      _stage1Tasks = allTasks.where((t) => t.readingStage == 1).toList();
-      _stage2Tasks = allTasks.where((t) => t.readingStage == 2).toList();
-      _stage3Tasks = allTasks.where((t) => t.readingStage == 3).toList();
-      _stage4Tasks = allTasks.where((t) => t.readingStage == 4).toList();
-      _stage5Tasks = allTasks.where((t) => t.readingStage == 5).toList();
     });
   }
 
   Future<void> _markTaskAsDone(Task task) async {
+    DateTime now = DateTime.now();
+    DateTime today = DateTime(now.year, now.month, now.day);
+
+    // Check karein ki marking aaj hi possible hai ya nahi
+    if (!task.nextRevisionDate.isBefore(today.add(const Duration(days: 1)))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("You can only mark this task on its scheduled day."))
+      );
+      return;
+    }
+
     int currentStage = task.readingStage;
     
-    if (currentStage < 5) {
-      task.readingStage += 1; // अगले स्टेज पर जाएं
-      // अगले रिविजन की तारीख सेट करें
-      int daysToAdd = revisionIntervals[currentStage -1];
+    if (currentStage < 6) { // Ab 6 stages hain
+      task.readingStage += 1;
+      int daysToAdd = revisionIntervals[currentStage - 1];
       task.nextRevisionDate = DateTime.now().add(Duration(days: daysToAdd));
     } else {
-      // 5वीं रीडिंग के बाद, स्टेटस 'completed' कर दें
-      task.status = 'completed';
+      task.status = 'completed'; // 6th reading ke baad
     }
 
     await DatabaseHelper.instance.updateTask(task.toMap());
-    _refreshAllTasks(); // UI रिफ्रेश करें
+    _refreshAllTasks();
+  }
+  
+  void _showEditDeleteMenu(BuildContext context, Task task) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return Wrap(
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Edit'),
+              onTap: () {
+                Navigator.pop(context); // Bottom sheet ko band karo
+                // Edit screen par jao
+                context.push('/edit-task', extra: task).then((_) => _refreshAllTasks());
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              onTap: () async {
+                Navigator.pop(context); // Bottom sheet ko band karo
+                await DatabaseHelper.instance.deleteTask(task.id!);
+                _refreshAllTasks();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -75,26 +110,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.dispose();
   }
   
-  // लिस्ट बनाने के लिए एक हेल्पर विजेट
   Widget _buildTaskList(List<Task> tasks) {
     if (tasks.isEmpty) {
-      return const Center(child: Text('No topics in this stage.'));
+      return const Center(child: Text('No topics here.'));
     }
     return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 80), // FAB ke liye space
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         final task = tasks[index];
-        return TaskCard(
-          subject: task.subject,
-          topic: task.topic,
-          revisionText: '${task.readingStage} Reading',
-          nextRevision: DateFormat.yMMMd().format(task.nextRevisionDate),
-          onMarkAsDone: (isDone) {
-            _markTaskAsDone(task);
-          },
+        return GestureDetector(
+          onLongPress: () => _showEditDeleteMenu(context, task),
+          child: TaskCard(
+            subject: task.subject,
+            topic: task.topic,
+            revisionText: '${task.readingStage} Reading',
+            nextRevision: DateFormat.yMMMd().format(task.nextRevisionDate),
+            onMarkAsDone: (isDone) => _markTaskAsDone(task),
+          ),
         );
       },
     );
+  }
+
+  // Stage ke hisaab se tasks filter karne ke liye
+  List<Task> _getTasksForStage(int stage) {
+    return _allTasks.where((t) => t.readingStage == stage).toList();
   }
 
   @override
@@ -113,6 +154,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             Tab(text: "3rd Reading"),
             Tab(text: "4th Reading"),
             Tab(text: "5th Reading"),
+            Tab(text: "6th Reading"),
           ],
         ),
       ),
@@ -120,11 +162,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         controller: _tabController,
         children: [
           _buildTaskList(_todaysTasks),
-          _buildTaskList(_stage1Tasks),
-          _buildTaskList(_stage2Tasks),
-          _buildTaskList(_stage3Tasks),
-          _buildTaskList(_stage4Tasks),
-          _buildTaskList(_stage5Tasks),
+          _buildTaskList(_getTasksForStage(1)),
+          _buildTaskList(_getTasksForStage(2)),
+          _buildTaskList(_getTasksForStage(3)),
+          _buildTaskList(_getTasksForStage(4)),
+          _buildTaskList(_getTasksForStage(5)),
+          _buildTaskList(_getTasksForStage(6)),
         ],
       ),
       floatingActionButton: FloatingActionButton(
