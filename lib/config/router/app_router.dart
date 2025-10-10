@@ -4,22 +4,21 @@ import 'package:chetegram/screens/add_flashcard_screen.dart';
 import 'package:chetegram/screens/add_task_screen.dart';
 import 'package:chetegram/screens/add_timetable_screen.dart';
 import 'package:chetegram/screens/analytics_screen.dart';
+import 'package:chetegram/screens/auth/login_screen.dart';
+import 'package:chetegram/screens/auth/signup_screen.dart';
 import 'package:chetegram/screens/edit_task_screen.dart';
 import 'package:chetegram/screens/flashcard_viewer_screen.dart';
 import 'package:chetegram/screens/flashcards_screen.dart';
 import 'package:chetegram/screens/home_screen.dart';
 import 'package:chetegram/screens/main_screen.dart';
+import 'package:chetegram/screens/profile/edit_profile_screen.dart';
 import 'package:chetegram/screens/profile_screen.dart';
 import 'package:chetegram/screens/timetable_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
-// नई स्क्रीन्स इम्पोर्ट करें
-import 'package:chetegram/screens/auth/login_screen.dart';
-import 'package:chetegram/screens/auth/signup_screen.dart';
-
-
+// Private navigators
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -82,6 +81,10 @@ final goRouter = GoRouter(
         final task = state.extra as Task;
         return EditTaskScreen(task: task);
       },
+    ),
+    GoRoute(
+      path: '/edit-profile',
+      builder: (context, state) => const EditProfileScreen(),
     ),
     
     // Main App Shell
