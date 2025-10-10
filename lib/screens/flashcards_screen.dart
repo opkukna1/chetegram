@@ -84,9 +84,9 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await context.go('/add-flashcard');
-          _refreshFlashcards();
+        onPressed: () {
+          // यहाँ context.go को context.push से बदल दिया गया है
+          context.push('/add-flashcard').then((_) => _refreshFlashcards());
         },
         child: const Icon(Icons.add),
       ),
