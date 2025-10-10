@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chetegram/models/task_model.dart';
 import 'package:chetegram/models/flashcard_model.dart';
+import 'package:chetegram/models/timetable_model.dart';
+import 'package:chetegram/models/time_slot_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -168,8 +170,6 @@ class FirestoreService {
     }
   }
 
-  // --- Flashcard Feed & Like Methods ---
-
   Stream<QuerySnapshot<Map<String, dynamic>>> getFeedFlashcards() async* {
     if (_user == null) {
       yield* Stream.empty();
@@ -225,5 +225,47 @@ class FirestoreService {
         .doc(_user!.uid)
         .snapshots()
         .map((snapshot) => snapshot.exists);
+  }
+
+  // --- TimeTable Methods ---
+
+  CollectionReference get _timetablesCollection {
+    if (_user == null) throw Exception('User not logged in');
+    return _db.collection('users').doc(_user!.uid).collection('timetables');
+  }
+
+  Future<void> addTimeTable(TimeTableModel timetable, List<TimeSlotModel> slots) async {
+    try {
+      DocumentReference timetableRef = await _timetablesCollection.add(timetable.toMap());
+      for (var slot in slots) {
+        await timetableRef.collection('slots').add(slot.toMap());
+      }
+    } catch (e) {
+      print('Error adding timetable: $e');
+    }
+  }
+
+  Stream<List<TimeTableModel>> getTimeTablesStream() {
+    if (_user == null) return Stream.value([]);
+    return _timetablesCollection.snapshots().asyncMap((snapshot) async {
+      List<TimeTableModel> timetables = [];
+      for (var doc in snapshot.docs) {
+        final timetable = TimeTableModel.fromFirestore(doc);
+        final slotsSnapshot = await doc.reference.collection('slots').get();
+        final slots = slotsSnapshot.docs
+            .map((slotDoc) => TimeSlotModel.fromFirestore(slotDoc.data(), slotDoc.id))
+            .toList();
+        timetables.add(TimeTableModel(id: timetable.id, title: timetable.title, slots: slots));
+      }
+      return timetables;
+    });
+  }
+
+  Future<void> deleteTimeTable(String timetableId) async {
+    try {
+      await _timetablesCollection.doc(timetableId).delete();
+    } catch (e) {
+      print('Error deleting timetable: $e');
+    }
   }
 }
