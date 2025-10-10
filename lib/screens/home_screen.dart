@@ -3,7 +3,6 @@ import 'package:chetegram/services/database_helper.dart';
 import 'package:chetegram/widgets/task_card.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_flutter/lucide_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -47,10 +46,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       appBar: AppBar(
         title: const Text('Hello, User! 👋'),
         actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.filter),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.filter_list), onPressed: () {}),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -68,7 +64,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       body: TabBarView(
         controller: _tabController,
         children: [
-          // Today's Task Tab
           FutureBuilder<List<Task>>(
             future: _tasksFuture,
             builder: (context, snapshot) {
@@ -79,7 +74,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return const Center(child: Text('No tasks found. Add one!'));
               }
-
               final tasks = snapshot.data!;
               return ListView.builder(
                 itemCount: tasks.length,
@@ -96,7 +90,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               );
             },
           ),
-          // Other Tabs - Placeholder
           const Center(child: Text('Content for 1st Reading')),
           const Center(child: Text('Content for 2nd Reading')),
           const Center(child: Text('Content for 3rd Reading')),
@@ -105,11 +98,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Navigate to the add task screen and refresh the list when we come back.
-          context.go('/add-task').then((_) => _refreshTasks());
+        onPressed: () async {
+          await context.go('/add-task');
+          _refreshTasks();
         },
-        child: const Icon(LucideIcons.plus),
+        child: const Icon(Icons.add),
       ),
     );
   }
