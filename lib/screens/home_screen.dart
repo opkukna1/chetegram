@@ -98,9 +98,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await context.go('/add-task');
-          _refreshTasks();
+        onPressed: () {
+          // यहाँ context.go को context.push से बदल दिया गया है
+          context.push('/add-task').then((_) => _refreshTasks());
         },
         child: const Icon(Icons.add),
       ),
