@@ -1,7 +1,9 @@
 import 'package:chetegram/models/flashcard_model.dart';
+import 'package:chetegram/models/task_model.dart';
 import 'package:chetegram/screens/add_flashcard_screen.dart';
 import 'package:chetegram/screens/add_task_screen.dart';
 import 'package:chetegram/screens/analytics_screen.dart';
+import 'package:chetegram/screens/edit_task_screen.dart';
 import 'package:chetegram/screens/flashcard_viewer_screen.dart';
 import 'package:chetegram/screens/flashcards_screen.dart';
 import 'package:chetegram/screens/home_screen.dart';
@@ -34,6 +36,13 @@ final goRouter = GoRouter(
         final List<Flashcard> flashcards = data['flashcards'];
         final int index = data['index'];
         return FlashcardViewerScreen(flashcards: flashcards, initialIndex: index);
+      },
+    ),
+    GoRoute(
+      path: '/edit-task',
+      builder: (context, state) {
+        final task = state.extra as Task;
+        return EditTaskScreen(task: task);
       },
     ),
     
