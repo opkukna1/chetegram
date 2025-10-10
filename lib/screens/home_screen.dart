@@ -2,6 +2,7 @@ import 'package:chetegram/models/task_model.dart';
 import 'package:chetegram/services/database_helper.dart';
 import 'package:chetegram/widgets/task_card.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_flutter/lucide_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -32,20 +33,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final dbHelper = DatabaseHelper.instance;
     final taskMaps = await dbHelper.getAllTasks();
     return taskMaps.map((map) => Task.fromMap(map)).toList();
-  }
-
-  Future<void> _addTask() async {
-    // This is a dummy task for demonstration
-    final newTask = Task(
-      subject: 'New Subject',
-      topic: 'A New Topic to Learn',
-      revision: '1st Reading',
-      nextRevisionDate: 'in 1 day',
-      isDone: false,
-    );
-    final dbHelper = DatabaseHelper.instance;
-    await dbHelper.insertTask(newTask.toMap());
-    _refreshTasks(); // Refresh the list after adding
   }
 
   @override
@@ -118,7 +105,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _addTask,
+        onPressed: () {
+          // Navigate to the add task screen and refresh the list when we come back.
+          context.go('/add-task').then((_) => _refreshTasks());
+        },
         child: const Icon(LucideIcons.plus),
       ),
     );
