@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "909558318411",
+    "project_id": "chetegram",
+    "storage_bucket": "chetegram.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:909558318411:android:43bba2e501883d4d5b54ce",
+        "android_client_info": {
+          "package_name": "chetegram.com"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "909558318411-khqqmmph6b70jo0lrdub4eofmdbrp3di.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "chetegram.com",
+            "certificate_hash": "8fd63014eb945c8b08fb4620330a32ce7c20ba5b"
+          }
+        },
+        {
+          "client_id": "909558318411-fganthdreg7ebmaesut0bq97cum92uni.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFzyf-XOfYvy4q3m1bHpt2m8MxuDoKdSU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "909558318411-fganthdreg7ebmaesut0bq97cum92uni.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
