@@ -1,12 +1,12 @@
 import 'package:chetegram/models/time_slot_model.dart';
-import 'package:chetegram/models/timetable_model.dart';
-import 'package:chetegram/services/firestore_service.dart'; // FirestoreService इम्पोर्ट करें
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package.chetegram/models/timetable_model.dart';
+import 'package.chetegram/services/firestore_service.dart';
+import 'package.flutter/material.dart';
+import 'package.go_router/go_router.dart';
 
-// यह एक छोटा मॉडल है जो सिर्फ इस स्क्रीन की State को मैनेज करने के लिए है
 class TimeSlotState {
   TextEditingController subjectController = TextEditingController();
+  TextEditingController topicController = TextEditingController(); // नया कंट्रोलर
   TimeOfDay? startTime;
   TimeOfDay? endTime;
   String frequency = 'Daily';
@@ -22,7 +22,7 @@ class AddTimeTableScreen extends StatefulWidget {
 class _AddTimeTableScreenState extends State<AddTimeTableScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
-  List<TimeSlotState> _slots = [TimeSlotState()]; // शुरुआत में एक स्लॉट
+  List<TimeSlotState> _slots = [TimeSlotState()];
   final FirestoreService _firestoreService = FirestoreService();
 
   Future<void> _saveTimeTable() async {
@@ -31,9 +31,13 @@ class _AddTimeTableScreenState extends State<AddTimeTableScreen> {
       
       List<TimeSlotModel> slotModels = [];
       for (var slotState in _slots) {
-        if (slotState.subjectController.text.isNotEmpty && slotState.startTime != null && slotState.endTime != null) {
+        if (slotState.subjectController.text.isNotEmpty &&
+            slotState.topicController.text.isNotEmpty &&
+            slotState.startTime != null &&
+            slotState.endTime != null) {
           slotModels.add(TimeSlotModel(
             subject: slotState.subjectController.text,
+            topic: slotState.topicController.text, // टॉपिक यहाँ से आएगा
             startTime: slotState.startTime!,
             endTime: slotState.endTime!,
             frequency: slotState.frequency,
@@ -46,7 +50,6 @@ class _AddTimeTableScreenState extends State<AddTimeTableScreen> {
         return;
       }
 
-      // डेटाबेस की जगह FirestoreService का उपयोग करें
       await _firestoreService.addTimeTable(timetable, slotModels);
 
       if (mounted) {
@@ -69,7 +72,6 @@ class _AddTimeTableScreenState extends State<AddTimeTableScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ... (UI का बाकी हिस्सा वैसा ही रहेगा जैसा पहले था)
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Time Table'),
@@ -121,7 +123,6 @@ class _AddTimeTableScreenState extends State<AddTimeTableScreen> {
   }
 
   Widget _buildSlotCard(int index) {
-    // ... (यह फंक्शन वैसा ही रहेगा जैसा पहले था)
     final slot = _slots[index];
     final String startTimeText = slot.startTime?.format(context) ?? 'Start Time';
     final String endTimeText = slot.endTime?.format(context) ?? 'End Time';
@@ -159,6 +160,12 @@ class _AddTimeTableScreenState extends State<AddTimeTableScreen> {
               controller: slot.subjectController,
               decoration: const InputDecoration(labelText: 'Subject'),
               validator: (v) => v!.isEmpty ? 'Subject is required' : null,
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: slot.topicController,
+              decoration: const InputDecoration(labelText: 'Topic'),
+              validator: (v) => v!.isEmpty ? 'Topic is required' : null,
             ),
             const SizedBox(height: 10),
             Row(
