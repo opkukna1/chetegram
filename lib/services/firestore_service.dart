@@ -268,4 +268,45 @@ class FirestoreService {
       print('Error deleting timetable: $e');
     }
   }
+
+  // --- Advanced Analytics Methods ---
+
+  Future<Map<String, double>> getTasksCountBySubject() async {
+    if (_user == null) return {};
+
+    try {
+      final snapshot = await _tasksCollection.get();
+      final tasks = snapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
+      
+      final Map<String, double> subjectCount = {};
+      for (var task in tasks) {
+        subjectCount.update(
+          task.subject,
+          (value) => value + 1,
+          ifAbsent: () => 1,
+        );
+      }
+      return subjectCount;
+    } catch (e) {
+      print('Error getting tasks count by subject: $e');
+      return {};
+    }
+  }
+
+  Future<void> addRevisionLog(String subject) async {
+    if (_user == null) return;
+    try {
+      await _db.collection('users').doc(_user!.uid).collection('revision_history').add({
+        'subject': subject,
+        'completedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error adding revision log: $e');
+    }
+  }
+
+  Stream<QuerySnapshot> getRevisionHistoryStream() {
+    if (_user == null) return Stream.empty();
+    return _db.collection('users').doc(_user!.uid).collection('revision_history').snapshots();
+  }
 }
