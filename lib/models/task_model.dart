@@ -1,10 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Task {
-  final int? id;
+  final String? id; // Firestore Document ID के लिए String
   final String subject;
   final String topic;
-  int readingStage; // पहले 'revision' (String) था, अब 'readingStage' (int) है
-  DateTime nextRevisionDate;
-  String status; // 'pending', 'completed_today', etc.
+  int readingStage;
+  Timestamp nextRevisionDate; // DateTime की जगह Timestamp
+  String status;
 
   Task({
     this.id,
@@ -15,29 +17,25 @@ class Task {
     this.status = 'pending',
   });
 
-  // डेटाबेस में सेव करने के लिए Map में बदलना
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'subject': subject,
       'topic': topic,
       'readingStage': readingStage,
-      // DateTime को स्ट्रिंग में सेव करेंगे (ISO 8601 format)
-      'nextRevisionDate': nextRevisionDate.toIso8601String(),
+      'nextRevisionDate': nextRevisionDate,
       'status': status,
     };
   }
 
-  // डेटाबेस से आए Map को Task ऑब्जेक्ट में बदलना
-  factory Task.fromMap(Map<String, dynamic> map) {
+  factory Task.fromFirestore(DocumentSnapshot doc) {
+    Map data = doc.data() as Map<String, dynamic>;
     return Task(
-      id: map['id'],
-      subject: map['subject'],
-      topic: map['topic'],
-      readingStage: map['readingStage'],
-      // स्ट्रिंग को वापस DateTime में बदलेंगे
-      nextRevisionDate: DateTime.parse(map['nextRevisionDate']),
-      status: map['status'],
+      id: doc.id,
+      subject: data['subject'] ?? '',
+      topic: data['topic'] ?? '',
+      readingStage: data['readingStage'] ?? 1,
+      nextRevisionDate: data['nextRevisionDate'] ?? Timestamp.now(),
+      status: data['status'] ?? 'pending',
     );
   }
 }
