@@ -93,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               leading: Icon(
                 _selectedSubjectFilter == subject || (_selectedSubjectFilter == null && subject == 'All')
                   ? Icons.check_circle
-                  : Icons.circle_outline,
+                  : Icons.radio_button_unchecked, // 'circle_outline' की जगह सही आइकॉन
                 color: Theme.of(context).primaryColor,
               ),
               onTap: () {
@@ -162,12 +162,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             controller: _tabController,
             children: [
               _buildTaskList(todaysTasks),
-              _buildTaskList(allTasks.where((t) => t.readingStage == 1).toList()),
-              _buildTaskList(allTasks.where((t) => t.readingStage == 2).toList()),
-              _buildTaskList(allTasks.where((t) => t.readingStage == 3).toList()),
-              _buildTaskList(allTasks.where((t) => t.readingStage == 4).toList()),
-              _buildTaskList(allTasks.where((t) => t.readingStage == 5).toList()),
-              _buildTaskList(allTasks.where((t) => t.readingStage == 6).toList()),
+              _buildTaskList(allTasks.where((Task t) => t.readingStage == 1).toList()),
+              _buildTaskList(allTasks.where((Task t) => t.readingStage == 2).toList()),
+              _buildTaskList(allTasks.where((Task t) => t.readingStage == 3).toList()),
+              _buildTaskList(allTasks.where((Task t) => t.readingStage == 4).toList()),
+              _buildTaskList(allTasks.where((Task t) => t.readingStage == 5).toList()),
+              _buildTaskList(allTasks.where((Task t) => t.readingStage == 6).toList()),
             ],
           );
         },
