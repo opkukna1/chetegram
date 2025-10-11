@@ -1,7 +1,9 @@
 import 'dart:math';
-import 'package.chetegram/services/firestore_service.dart';
-import 'package.fl_chart/fl_chart.dart';
-import 'package.flutter/material.dart';
+import 'package:chetegram/services/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -26,7 +28,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     setState(() {
       _subjectDataFuture = _firestoreService.getTasksCountBySubject();
       _totalTopicsFuture = _firestoreService.getTasksCount();
-      // Completed tasks ke liye hum getCompletedTasks ka count lenge
       _completedTopicsFuture = _firestoreService.getCompletedTasks().then((list) => list.length);
     });
   }
@@ -53,7 +54,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 child: _buildStatCard(
                   title: 'Total Topics',
                   future: _totalTopicsFuture,
-                  icon: Icons.topic,
+                  icon: Icons.topic_outlined,
                   color: Colors.blue,
                 ),
               ),
@@ -62,11 +63,70 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 child: _buildStatCard(
                   title: 'Mastered',
                   future: _completedTopicsFuture,
-                  icon: Icons.star,
+                  icon: Icons.star_border_purple500_outlined,
                   color: Colors.green,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 24),
+
+          // --- Calendar Heatmap Card ---
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Study Activity',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  StreamBuilder<QuerySnapshot>(
+                    stream: _firestoreService.getRevisionHistoryStream(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return const Center(child: Text('No revision history yet.'));
+                      }
+
+                      final Map<DateTime, int> heatmapData = {};
+                      for (var doc in snapshot.data!.docs) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        if (data['completedAt'] != null) {
+                          final timestamp = data['completedAt'] as Timestamp;
+                          final date = timestamp.toDate();
+                          final dayOnly = DateTime(date.year, date.month, date.day);
+                          
+                          heatmapData.update(dayOnly, (value) => value + 1, ifAbsent: () => 1);
+                        }
+                      }
+
+                      return HeatMapCalendar(
+                        datasets: heatmapData,
+                        colorsets: const {
+                          1: Color.fromARGB(255, 174, 214, 241),
+                          3: Color.fromARGB(255, 127, 179, 213),
+                          5: Color.fromARGB(255, 82, 144, 186),
+                          7: Color.fromARGB(255, 41, 128, 185),
+                          10: Color.fromARGB(255, 31, 97, 141),
+                        },
+                        defaultColor: Colors.grey.shade200,
+                        textColor: Colors.black,
+                        showColorTip: true,
+                        colorTipSize: 15,
+                        size: 40,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 24),
 
@@ -114,9 +174,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  // पाई-चार्ट के सेक्शन बनाने का फंक्शन
   List<PieChartSectionData> _generatePieChartSections(Map<String, double> data) {
-    final List<Color> colors = Colors.primaries;
+    final List<Color> colors = Colors.primaries.map((e) => e.shade300).toList();
     int colorIndex = 0;
     
     return data.entries.map((entry) {
@@ -138,7 +197,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     }).toList();
   }
 
-  // स्टैट्स कार्ड बनाने के लिए एक हेल्पर विजेट
   Widget _buildStatCard({
     required String title,
     required Future<int> future,
@@ -146,12 +204,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     required Color color,
   }) {
     return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             CircleAvatar(
-              backgroundColor: color.withOpacity(0.2),
+              backgroundColor: color.withOpacity(0.1),
               child: Icon(icon, color: color),
             ),
             const SizedBox(height: 8),
@@ -168,7 +228,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               },
             ),
             const SizedBox(height: 4),
-            Text(title, style: const TextStyle(color: Colors.grey)),
+            Text(title, style: TextStyle(color: Colors.grey.shade600)),
           ],
         ),
       ),
