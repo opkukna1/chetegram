@@ -4,6 +4,7 @@ import 'package:chetegram/models/task_model.dart';
 import 'package:chetegram/models/flashcard_model.dart';
 import 'package:chetegram/models/timetable_model.dart';
 import 'package:chetegram/models/time_slot_model.dart';
+import 'package:chetegram/models/user_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -11,74 +12,46 @@ class FirestoreService {
 
   // --- User Profile & Follow Methods ---
 
-  Future<void> createUserProfile({
-    required String uid,
-    required String name,
-    required String email,
-  }) async {
+  Future<void> createUserProfile({required String uid, required String name, required String email}) async {
     try {
       await _db.collection('users').doc(uid).set({
-        'uid': uid,
-        'name': name,
-        'email': email,
-        'bio': '',
-        'location': '',
-        'profilePicUrl': '',
-        'coverPhotoUrl': '',
-        'followersCount': 0,
-        'followingCount': 0,
+        'uid': uid, 'name': name, 'email': email, 'bio': '', 'location': '',
+        'profilePicUrl': '', 'coverPhotoUrl': '', 'followersCount': 0, 'followingCount': 0,
         'createdAt': FieldValue.serverTimestamp(),
       });
-    } catch (e) {
-      print('Error creating user profile: $e');
-    }
+    } catch (e) { print('Error creating user profile: $e'); }
   }
 
   Future<DocumentSnapshot?> getUserProfile(String? uid) async {
     try {
       String userId = uid ?? _user!.uid;
       return await _db.collection('users').doc(userId).get();
-    } catch (e) {
-      print('Error getting user profile: $e');
-      return null;
-    }
+    } catch (e) { print('Error getting user profile: $e'); return null; }
   }
 
   Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
     try {
       await _db.collection('users').doc(uid).update(data);
-    } catch (e) {
-      print("Error updating profile: $e");
-    }
+    } catch (e) { print("Error updating profile: $e"); }
   }
   
   Future<List<QueryDocumentSnapshot>> searchUsers(String name) async {
     try {
       if (name.isEmpty) return [];
-      final result = await _db
-          .collection('users')
-          .where('name', isGreaterThanOrEqualTo: name)
-          .where('name', isLessThanOrEqualTo: '$name\uf8ff')
-          .limit(10)
-          .get();
+      final result = await _db.collection('users').where('name', isGreaterThanOrEqualTo: name).where('name', isLessThanOrEqualTo: '$name\uf8ff').limit(10).get();
       return result.docs;
-    } catch (e) {
-      print('Error searching users: $e');
-      return [];
-    }
+    } catch (e) { print('Error searching users: $e'); return []; }
   }
 
   Future<void> followUser(String otherUserId) async {
     if (_user == null) return;
     final currentUserRef = _db.collection('users').doc(_user!.uid);
     final otherUserRef = _db.collection('users').doc(otherUserId);
-
     final batch = _db.batch();
     batch.set(currentUserRef.collection('following').doc(otherUserId), {});
     batch.set(otherUserRef.collection('followers').doc(_user!.uid), {});
     batch.update(currentUserRef, {'followingCount': FieldValue.increment(1)});
     batch.update(otherUserRef, {'followersCount': FieldValue.increment(1)});
-    
     await batch.commit();
   }
 
@@ -86,13 +59,11 @@ class FirestoreService {
      if (_user == null) return;
     final currentUserRef = _db.collection('users').doc(_user!.uid);
     final otherUserRef = _db.collection('users').doc(otherUserId);
-
     final batch = _db.batch();
     batch.delete(currentUserRef.collection('following').doc(otherUserId));
     batch.delete(otherUserRef.collection('followers').doc(_user!.uid));
     batch.update(currentUserRef, {'followingCount': FieldValue.increment(-1)});
     batch.update(otherUserRef, {'followersCount': FieldValue.increment(-1)});
-
     await batch.commit();
   }
 
@@ -102,12 +73,31 @@ class FirestoreService {
     return doc.exists;
   }
 
-  // --- Subject/Topic Methods ---
+  Future<List<UserModel>> getFollowers(String userId) async {
+    try {
+      final followerDocs = await _db.collection('users').doc(userId).collection('followers').get();
+      if (followerDocs.docs.isEmpty) return [];
+      final followerIds = followerDocs.docs.map((doc) => doc.id).toList();
+      final userDocs = await _db.collection('users').where(FieldPath.documentId, whereIn: followerIds.take(10)).get();
+      return userDocs.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
+    } catch (e) { print(e); return []; }
+  }
 
+  Future<List<UserModel>> getFollowing(String userId) async {
+    try {
+      final followingDocs = await _db.collection('users').doc(userId).collection('following').get();
+      if (followingDocs.docs.isEmpty) return [];
+      final followingIds = followingDocs.docs.map((doc) => doc.id).toList();
+      final userDocs = await _db.collection('users').where(FieldPath.documentId, whereIn: followingIds.take(10)).get();
+      return userDocs.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
+    } catch (e) { print(e); return []; }
+  }
+
+  // --- Subject/Topic Methods ---
   Future<List<String>> getSubjects() async {
     try {
       final snapshot = await _db.collection('subjects').get();
-      return snapshot.docs.map((doc) => doc.id).toList();
+      return snapshot.docs.map((doc) => doc.data()['name'] as String).toList();
     } catch (e) {
       print(e);
       return [];
@@ -125,7 +115,6 @@ class FirestoreService {
   }
 
   // --- Task Methods ---
-
   CollectionReference get _tasksCollection {
     if (_user == null) throw Exception('User not logged in');
     return _db.collection('users').doc(_user!.uid).collection('tasks');
@@ -140,14 +129,8 @@ class FirestoreService {
   }
   
   Future<bool> doesTaskExist(String subject, String topic) async {
-    if (_user == null) return true; // Prevent adding if not logged in
-    
-    final query = await _tasksCollection
-        .where('subject', isEqualTo: subject)
-        .where('topic', isEqualTo: topic)
-        .limit(1)
-        .get();
-        
+    if (_user == null) return true;
+    final query = await _tasksCollection.where('subject', isEqualTo: subject).where('topic', isEqualTo: topic).limit(1).get();
     return query.docs.isNotEmpty;
   }
 
@@ -167,13 +150,16 @@ class FirestoreService {
     }
   }
 
-  Stream<QuerySnapshot> getTasksStream() {
+  Stream<QuerySnapshot> getTasksStream({String? subject}) {
     if (_user == null) return Stream.empty();
-    return _tasksCollection.orderBy('nextRevisionDate', descending: false).snapshots();
+    Query query = _tasksCollection;
+    if (subject != null && subject != 'All') {
+      query = query.where('subject', isEqualTo: subject);
+    }
+    return query.orderBy('nextRevisionDate', descending: false).snapshots();
   }
   
   // --- Flashcard Methods ---
-
   Future<void> addFlashcard(Flashcard flashcard) async {
     try {
       await _db.collection('flashcards').add(flashcard.toMap());
@@ -183,42 +169,21 @@ class FirestoreService {
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getFeedFlashcards() async* {
-    if (_user == null) {
-      yield* Stream.empty();
-      return;
-    }
-
+    if (_user == null) { yield* Stream.empty(); return; }
     final followingSnapshot = await _db.collection('users').doc(_user!.uid).collection('following').get();
     final followingIds = followingSnapshot.docs.map((doc) => doc.id).toList();
-
-    if (followingIds.isEmpty) {
-      yield* Stream.empty();
-      return;
-    }
-
-    yield* _db
-        .collection('flashcards')
-        .where('creatorId', whereIn: followingIds)
-        .where('isPublic', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
-        .snapshots();
+    if (followingIds.isEmpty) { yield* Stream.empty(); return; }
+    yield* _db.collection('flashcards').where('creatorId', whereIn: followingIds).where('isPublic', isEqualTo: true).orderBy('createdAt', descending: true).snapshots();
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getRecommendedFlashcards() {
-    return _db
-        .collection('flashcards')
-        .where('isPublic', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
-        .limit(20)
-        .snapshots();
+    return _db.collection('flashcards').where('isPublic', isEqualTo: true).orderBy('createdAt', descending: true).limit(20).snapshots();
   }
   
   Future<void> toggleLike(String flashcardId, bool isCurrentlyLiked) async {
     if (_user == null) return;
-    
     final flashcardRef = _db.collection('flashcards').doc(flashcardId);
     final likesRef = flashcardRef.collection('likes').doc(_user!.uid);
-
     if (isCurrentlyLiked) {
       await likesRef.delete();
       await flashcardRef.update({'likeCount': FieldValue.increment(-1)});
@@ -230,17 +195,14 @@ class FirestoreService {
 
   Stream<bool> checkIfLiked(String flashcardId) {
     if (_user == null) return Stream.value(false);
-    return _db
-        .collection('flashcards')
-        .doc(flashcardId)
-        .collection('likes')
-        .doc(_user!.uid)
-        .snapshots()
-        .map((snapshot) => snapshot.exists);
+    return _db.collection('flashcards').doc(flashcardId).collection('likes').doc(_user!.uid).snapshots().map((snapshot) => snapshot.exists);
+  }
+  
+  Stream<QuerySnapshot> getFlashcardsForUser(String userId) {
+    return _db.collection('flashcards').where('creatorId', isEqualTo: userId).where('isPublic', isEqualTo: true).orderBy('createdAt', descending: true).snapshots();
   }
 
   // --- TimeTable Methods ---
-
   CollectionReference get _timetablesCollection {
     if (_user == null) throw Exception('User not logged in');
     return _db.collection('users').doc(_user!.uid).collection('timetables');
@@ -252,9 +214,7 @@ class FirestoreService {
       for (var slot in slots) {
         await timetableRef.collection('slots').add(slot.toMap());
       }
-    } catch (e) {
-      print('Error adding timetable: $e');
-    }
+    } catch (e) { print('Error adding timetable: $e'); }
   }
 
   Stream<List<TimeTableModel>> getTimeTablesStream() {
@@ -264,9 +224,7 @@ class FirestoreService {
       for (var doc in snapshot.docs) {
         final timetable = TimeTableModel.fromFirestore(doc);
         final slotsSnapshot = await doc.reference.collection('slots').get();
-        final slots = slotsSnapshot.docs
-            .map((slotDoc) => TimeSlotModel.fromFirestore(slotDoc.data(), slotDoc.id))
-            .toList();
+        final slots = slotsSnapshot.docs.map((slotDoc) => TimeSlotModel.fromFirestore(slotDoc.data(), slotDoc.id)).toList();
         timetables.add(TimeTableModel(id: timetable.id, title: timetable.title, slots: slots));
       }
       return timetables;
@@ -276,33 +234,21 @@ class FirestoreService {
   Future<void> deleteTimeTable(String timetableId) async {
     try {
       await _timetablesCollection.doc(timetableId).delete();
-    } catch (e) {
-      print('Error deleting timetable: $e');
-    }
+    } catch (e) { print('Error deleting timetable: $e'); }
   }
 
   // --- Advanced Analytics Methods ---
-
   Future<Map<String, double>> getTasksCountBySubject() async {
     if (_user == null) return {};
-
     try {
       final snapshot = await _tasksCollection.get();
       final tasks = snapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
-      
       final Map<String, double> subjectCount = {};
       for (var task in tasks) {
-        subjectCount.update(
-          task.subject,
-          (value) => value + 1,
-          ifAbsent: () => 1,
-        );
+        subjectCount.update(task.subject, (value) => value + 1, ifAbsent: () => 1);
       }
       return subjectCount;
-    } catch (e) {
-      print('Error getting tasks count by subject: $e');
-      return {};
-    }
+    } catch (e) { print('Error getting tasks count by subject: $e'); return {}; }
   }
 
   Future<void> addRevisionLog(String subject) async {
@@ -312,9 +258,7 @@ class FirestoreService {
         'subject': subject,
         'completedAt': FieldValue.serverTimestamp(),
       });
-    } catch (e) {
-      print('Error adding revision log: $e');
-    }
+    } catch (e) { print('Error adding revision log: $e'); }
   }
 
   Stream<QuerySnapshot> getRevisionHistoryStream() {
