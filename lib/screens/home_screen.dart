@@ -66,7 +66,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               title: const Text('Delete', style: TextStyle(color: Colors.red)),
               onTap: () async {
                 Navigator.pop(context);
-                await _firestoreService.deleteTask(task.id!);
+                if (task.id != null) {
+                  await _firestoreService.deleteTask(task.id!);
+                }
               },
             ),
           ],
