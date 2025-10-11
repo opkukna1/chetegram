@@ -30,20 +30,23 @@ final goRouter = GoRouter(
     final bool loggedIn = FirebaseAuth.instance.currentUser != null;
     final bool loggingIn = state.uri.path == '/login' || state.uri.path == '/signup';
 
-    if (!loggedIn && !loggingIn) {
-      return '/login';
-    }
-    if (loggedIn && loggingIn) {
-      return '/home';
-    }
+    if (!loggedIn && !loggingIn) return '/login';
+    if (loggedIn && loggingIn) return '/home';
     return null;
   },
   routes: [
+    // --- टॉप लेवल रूट्स (जो बॉटम बार को छिपा देते हैं) ---
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(path: '/signup', builder: (context, state) => const SignupScreen()),
     GoRoute(path: '/add-task', builder: (context, state) => const AddTaskScreen()),
     GoRoute(path: '/add-flashcard', builder: (context, state) => const AddFlashcardScreen()),
     GoRoute(path: '/add-timetable', builder: (context, state) => const AddTimeTableScreen()),
+    GoRoute(
+      path: '/edit-task',
+      builder: (context, state) => EditTaskScreen(task: state.extra as Task),
+    ),
+    GoRoute(path: '/edit-profile', builder: (context, state) => const EditProfileScreen()),
+    GoRoute(path: '/search', builder: (context, state) => const UserSearchScreen()),
     GoRoute(
       path: '/flashcard-viewer',
       builder: (context, state) {
@@ -52,19 +55,22 @@ final goRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/edit-task',
-      builder: (context, state) => EditTaskScreen(task: state.extra as Task),
-    ),
-    GoRoute(path: '/edit-profile', builder: (context, state) => const EditProfileScreen()),
-    GoRoute(path: '/search', builder: (context, state) => const UserSearchScreen()),
-    GoRoute(
       path: '/user-list',
       builder: (context, state) {
         final data = state.extra as Map<String, dynamic>;
         return UserListScreen(userId: data['userId'], listType: data['listType']);
       },
     ),
+    // दूसरों की प्रोफाइल देखने के लिए नया रूट
+    GoRoute(
+      path: '/view-profile/:userId', 
+      builder: (context, state) {
+        final userId = state.pathParameters['userId'];
+        return ProfileScreen(userId: userId);
+      },
+    ),
     
+    // --- बॉटम बार वाले रूट्स ---
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) => MainScreen(child: child),
@@ -73,9 +79,10 @@ final goRouter = GoRouter(
         GoRoute(path: '/timetable', builder: (context, state) => const TimeTableScreen()),
         GoRoute(path: '/flashcards', builder: (context, state) => const FlashcardsScreen()),
         GoRoute(path: '/analytics', builder: (context, state) => const AnalyticsScreen()),
+        // प्रोफाइल टैब के लिए नया और सही रूट
         GoRoute(
-          path: '/profile/:userId',
-          builder: (context, state) => ProfileScreen(userId: state.pathParameters['userId']),
+          path: '/profile',
+          builder: (context, state) => const ProfileScreen(), // यहाँ कोई userId नहीं है
         ),
       ],
     ),
