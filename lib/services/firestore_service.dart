@@ -138,6 +138,18 @@ class FirestoreService {
       print('Error adding task: $e');
     }
   }
+  
+  Future<bool> doesTaskExist(String subject, String topic) async {
+    if (_user == null) return true; // Prevent adding if not logged in
+    
+    final query = await _tasksCollection
+        .where('subject', isEqualTo: subject)
+        .where('topic', isEqualTo: topic)
+        .limit(1)
+        .get();
+        
+    return query.docs.isNotEmpty;
+  }
 
   Future<void> updateTask(Task task) async {
     try {
