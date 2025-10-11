@@ -18,6 +18,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final FirestoreService _firestoreService = FirestoreService();
   final List<int> revisionIntervals = [1, 2, 4, 7, 16, 30];
 
+  String? _selectedSubjectFilter;
+
   @override
   void initState() {
     super.initState();
@@ -33,12 +35,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       return;
     }
 
-    // नया स्टेप: रिवीजन को हिस्ट्री में लॉग करें
     await _firestoreService.addRevisionLog(task.subject);
 
     if (task.readingStage < 6) {
       task.readingStage += 1;
-      // सही इंडेक्स का उपयोग करें (पिछली गलती को ठीक किया गया)
       int daysToAdd = revisionIntervals[task.readingStage - 2]; 
       task.nextRevisionDate = Timestamp.fromDate(DateTime.now().add(Duration(days: daysToAdd)));
     } else {
@@ -74,6 +74,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       },
     );
   }
+  
+  void _showFilterDialog() async {
+    final subjects = await _firestoreService.getSubjects();
+    subjects.insert(0, 'All');
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return ListView.builder(
+          itemCount: subjects.length,
+          itemBuilder: (context, index) {
+            final subject = subjects[index];
+            return ListTile(
+              title: Text(subject),
+              leading: Icon(
+                _selectedSubjectFilter == subject || (_selectedSubjectFilter == null && subject == 'All')
+                  ? Icons.check_circle
+                  : Icons.circle_outline,
+                color: Theme.of(context).primaryColor,
+              ),
+              onTap: () {
+                setState(() {
+                  _selectedSubjectFilter = (subject == 'All') ? null : subject;
+                });
+                Navigator.pop(context);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   void dispose() {
@@ -85,8 +117,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hello, User! 👋'),
-        actions: [IconButton(icon: const Icon(Icons.filter_list), onPressed: () {})],
+        title: Text(_selectedSubjectFilter ?? 'All Tasks'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: _showFilterDialog,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -102,13 +139,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _firestoreService.getTasksStream(),
+        stream: _firestoreService.getTasksStream(subject: _selectedSubjectFilter),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('No tasks yet. Tap "+" to add one!', textAlign: TextAlign.center));
+            return Center(child: Text('No tasks found. Tap "+" to add one!', textAlign: TextAlign.center));
           }
 
           final allTasks = snapshot.data!.docs.map((doc) => Task.fromFirestore(doc)).toList();
