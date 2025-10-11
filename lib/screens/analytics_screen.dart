@@ -1,6 +1,7 @@
-import 'package:chetegram/models/task_model.dart';
-import 'package:chetegram/services/database_helper.dart';
-import 'package:flutter/material.dart';
+import 'dart:math';
+import 'package.chetegram/services/firestore_service.dart';
+import 'package.fl_chart/fl_chart.dart';
+import 'package.flutter/material.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -9,37 +10,25 @@ class AnalyticsScreen extends StatefulWidget {
   State<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  int _totalTopics = 0;
-  List<Task> _stage2Tasks = [];
-  List<Task> _stage3Tasks = [];
-  List<Task> _stage4Tasks = [];
-  List<Task> _stage5Tasks = [];
-  List<Task> _completedTasks = [];
+class _AnalyticsScreenState extends State<AnalyticsScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+  late Future<Map<String, double>> _subjectDataFuture;
+  late Future<int> _totalTopicsFuture;
+  late Future<int> _completedTopicsFuture;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
     _loadAnalyticsData();
   }
 
-  Future<void> _loadAnalyticsData() async {
-    final dbHelper = DatabaseHelper.instance;
-    _totalTopics = await dbHelper.getTasksCount();
-    _stage2Tasks = (await dbHelper.getTasksByStage(2)).map((map) => Task.fromMap(map)).toList();
-    _stage3Tasks = (await dbHelper.getTasksByStage(3)).map((map) => Task.fromMap(map)).toList();
-    _stage4Tasks = (await dbHelper.getTasksByStage(4)).map((map) => Task.fromMap(map)).toList();
-    _stage5Tasks = (await dbHelper.getTasksByStage(5)).map((map) => Task.fromMap(map)).toList();
-    _completedTasks = (await dbHelper.getCompletedTasks()).map((map) => Task.fromMap(map)).toList();
-    setState(() {}); // UI को अपडेट करने के लिए
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  void _loadAnalyticsData() {
+    setState(() {
+      _subjectDataFuture = _firestoreService.getTasksCountBySubject();
+      _totalTopicsFuture = _firestoreService.getTasksCount();
+      // Completed tasks ke liye hum getCompletedTasks ka count lenge
+      _completedTopicsFuture = _firestoreService.getCompletedTasks().then((list) => list.length);
+    });
   }
 
   @override
@@ -47,71 +36,77 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Progress 📊'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadAnalyticsData,
+          ),
+        ],
       ),
-      body: Column(
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
         children: [
           // --- Stats Cards ---
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          Text('$_totalTopics', style: Theme.of(context).textTheme.headlineMedium),
-                          const SizedBox(height: 4),
-                          const Text('Total Topics'),
-                        ],
-                      ),
-                    ),
-                  ),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  title: 'Total Topics',
+                  future: _totalTopicsFuture,
+                  icon: Icons.topic,
+                  color: Colors.blue,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          Text('${_completedTasks.length}', style: Theme.of(context).textTheme.headlineMedium),
-                           const SizedBox(height: 4),
-                          const Text('Mastered'),
-                        ],
-                      ),
-                    ),
-                  ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard(
+                  title: 'Mastered',
+                  future: _completedTopicsFuture,
+                  icon: Icons.star,
+                  color: Colors.green,
                 ),
-              ],
-            ),
-          ),
-
-          // --- Tabs for each stage ---
-          TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            tabs: const [
-              Tab(text: '2nd Reading Done'),
-              Tab(text: '3rd Reading Done'),
-              Tab(text: '4th Reading Done'),
-              Tab(text: '5th Reading Done'),
-              Tab(text: 'Mastered'),
+              ),
             ],
           ),
+          const SizedBox(height: 24),
 
-          // --- Tab Content ---
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildStageList(_stage2Tasks),
-                _buildStageList(_stage3Tasks),
-                _buildStageList(_stage4Tasks),
-                _buildStageList(_stage5Tasks),
-                _buildStageList(_completedTasks),
-              ],
+          // --- Pie Chart Card ---
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Subject Distribution',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 200,
+                    child: FutureBuilder<Map<String, double>>(
+                      future: _subjectDataFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return const Center(child: Text('No data for chart.'));
+                        }
+                        return PieChart(
+                          PieChartData(
+                            sections: _generatePieChartSections(snapshot.data!),
+                            centerSpaceRadius: 40,
+                            sectionsSpace: 2,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -119,19 +114,64 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildStageList(List<Task> tasks) {
-    if (tasks.isEmpty) {
-      return const Center(child: Text('No topics have reached this stage yet.'));
-    }
-    return ListView.builder(
-      itemCount: tasks.length,
-      itemBuilder: (context, index) {
-        final task = tasks[index];
-        return ListTile(
-          title: Text(task.topic),
-          subtitle: Text(task.subject),
-        );
-      },
+  // पाई-चार्ट के सेक्शन बनाने का फंक्शन
+  List<PieChartSectionData> _generatePieChartSections(Map<String, double> data) {
+    final List<Color> colors = Colors.primaries;
+    int colorIndex = 0;
+    
+    return data.entries.map((entry) {
+      final color = colors[colorIndex % colors.length];
+      colorIndex++;
+      
+      return PieChartSectionData(
+        color: color,
+        value: entry.value,
+        title: '${entry.key}\n(${entry.value.toInt()})',
+        radius: 60,
+        titleStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          shadows: [Shadow(color: Colors.black, blurRadius: 2)],
+        ),
+      );
+    }).toList();
+  }
+
+  // स्टैट्स कार्ड बनाने के लिए एक हेल्पर विजेट
+  Widget _buildStatCard({
+    required String title,
+    required Future<int> future,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            CircleAvatar(
+              backgroundColor: color.withOpacity(0.2),
+              child: Icon(icon, color: color),
+            ),
+            const SizedBox(height: 8),
+            FutureBuilder<int>(
+              future: future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(height: 28, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+                }
+                return Text(
+                  (snapshot.data ?? 0).toString(),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                );
+              },
+            ),
+            const SizedBox(height: 4),
+            Text(title, style: const TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
     );
   }
 }
