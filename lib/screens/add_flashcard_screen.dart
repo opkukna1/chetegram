@@ -22,29 +22,28 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final StorageService _storageService = StorageService();
   
-  // State variables
   String? _selectedSubject;
   String? _selectedTopic;
   bool _isPublic = false;
   File? _imageFile;
   bool _isLoading = false;
 
-  // --- Placeholder Data ---
-  // Asli app mein yeh data aap Firebase se laayenge
   final Map<String, List<String>> _subjectsAndTopics = {
     'Geography': ['Motions of the Earth', 'Rivers of India', 'Mountains'],
     'History': ['Ancient India', 'Mughal Empire', 'Indus Valley Civilization'],
     'Polity': ['Fundamental Rights', 'Preamble', 'Parliament'],
   };
-  // -------------------------
   
   late Color _selectedColor;
-  final List<Color> _colors = [ /* ... */ ]; // Aapki color list yahaan
+  final List<Color> _colors = [
+    Colors.blue.shade100, Colors.green.shade100, Colors.orange.shade100,
+    Colors.red.shade100, Colors.purple.shade100, Colors.yellow.shade100
+  ];
 
   @override
   void initState() {
     super.initState();
-    _selectedColor = _colors.isNotEmpty ? _colors.first : Colors.blue.shade100;
+    _selectedColor = _colors.first;
   }
 
   String _colorToHex(Color color) => '#${color.value.toRadixString(16).substring(2)}';
@@ -64,14 +63,16 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
       setState(() => _isLoading = true);
 
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
       
       String imageUrl = '';
       if (_imageFile != null) {
-        // Image ko Firebase Storage par upload karein
-        final downloadUrl = await _storageService.pickAndUploadImage(
+        final downloadUrl = await _storageService.uploadImage(
           'flashcard_images/${user.uid}/${DateTime.now().millisecondsSinceEpoch}',
-          _imageFile! // Pass the file to the service
+          _imageFile!
         );
         if (downloadUrl != null) {
           imageUrl = downloadUrl;
@@ -120,7 +121,6 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // --- Photo Add Section ---
                   GestureDetector(
                     onTap: _pickImage,
                     child: Container(
@@ -138,7 +138,6 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // --- Subject and Topic Dropdowns ---
                   DropdownButtonFormField<String>(
                     value: _selectedSubject,
                     hint: const Text('Choose Subject'),
@@ -148,7 +147,7 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
                     onChanged: (newValue) {
                       setState(() {
                         _selectedSubject = newValue;
-                        _selectedTopic = null; // Topic reset karein
+                        _selectedTopic = null;
                       });
                     },
                     validator: (v) => v == null ? 'Subject is required' : null,
@@ -170,7 +169,6 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
                   const SizedBox(height: 16),
                   TextFormField(controller: _backController, decoration: const InputDecoration(labelText: 'Back Text / Details'), maxLines: 5, maxLength: 200, validator: (v) => v!.isEmpty ? 'Required' : null),
                   
-                  // --- Privacy Switch ---
                   SwitchListTile(
                     title: const Text('Make this flashcard public?'),
                     value: _isPublic,
@@ -187,5 +185,4 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
           ),
     );
   }
-}
 }
