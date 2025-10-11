@@ -1,4 +1,4 @@
-import 'package:chetegram/models/flashcard_model.dart'; // यह लाइन जोड़ दी गई है
+import 'package:chetegram/models/flashcard_model.dart';
 import 'package:chetegram/models/user_model.dart';
 import 'package:chetegram/services/auth_service.dart';
 import 'package:chetegram/services/firestore_service.dart';
@@ -23,7 +23,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   late TabController _tabController;
   
   Future<DocumentSnapshot?>? _userProfileFuture;
-
   bool _isFollowing = false;
   bool _isLoadingFollow = true;
 
@@ -116,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return <Widget>[
                 SliverAppBar(
-                  expandedHeight: 200.0,
+                  expandedHeight: 150.0,
                   floating: false,
                   pinned: true,
                   actions: [
@@ -133,19 +132,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     background: Stack(
                       fit: StackFit.expand,
                       children: [
-                        user.coverPhotoUrl.isNotEmpty
-                            ? Image.network(user.coverPhotoUrl, fit: BoxFit.cover)
-                            : Container(color: Colors.grey.shade300),
+                        Container(color: Colors.deepPurple.shade300),
                         Positioned(
                           bottom: -1,
                           left: 16,
                           child: CircleAvatar(
                             radius: 52,
                             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                            child: CircleAvatar(
+                            child: const CircleAvatar(
                               radius: 50,
-                              backgroundImage: user.profilePicUrl.isNotEmpty ? NetworkImage(user.profilePicUrl) : null,
-                              child: user.profilePicUrl.isEmpty ? const Icon(Icons.person, size: 50) : null,
+                              child: Icon(Icons.person, size: 60),
                             ),
                           ),
                         ),
@@ -228,7 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           builder: (context, snapshot) {
                             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                             if (snapshot.data!.docs.isEmpty) {
-                              return const Center(child: Text('This user has no public flashcards.'));
+                              return Center(child: Text(isMyProfile ? 'You have no public flashcards.' : 'This user has no public flashcards.'));
                             }
                             final flashcards = snapshot.data!.docs.map((doc) => Flashcard.fromFirestore(doc)).toList();
                             
@@ -248,10 +244,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        if (card.imageUrl.isNotEmpty)
-                                          Expanded(child: Image.network(card.imageUrl, width: double.infinity, fit: BoxFit.cover))
-                                        else
-                                          Expanded(child: Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.image_not_supported)))),
+                                        // Image View is removed, showing a colored container instead
+                                        Expanded(child: Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.article_outlined)))),
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(card.frontText, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
