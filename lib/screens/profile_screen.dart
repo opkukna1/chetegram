@@ -1,3 +1,4 @@
+import 'package:chetegram/models/flashcard_model.dart';
 import 'package:chetegram/models/user_model.dart';
 import 'package:chetegram/services/auth_service.dart';
 import 'package:chetegram/services/firestore_service.dart';
@@ -5,7 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:chetegram/screens/profile/user_list_screen.dart'; // UserListType के लिए इम्पोर्ट करें
+import 'package:chetegram/screens/profile/user_list_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId;
@@ -55,15 +56,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   void _handleFollowButton() async {
     if (_currentUserId == null || widget.userId == null) return;
-
     setState(() => _isLoadingFollow = true);
-
     if (_isFollowing) {
       await _firestoreService.unfollowUser(widget.userId!);
     } else {
       await _firestoreService.followUser(widget.userId!);
     }
-    
     _checkIfFollowing();
     _loadProfile();
   }
@@ -77,6 +75,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     bool isMyProfile = (widget.userId == null || widget.userId == _currentUserId);
+    String profileUserId = widget.userId ?? _currentUserId!;
 
     return Scaffold(
       body: FutureBuilder<DocumentSnapshot?>(
@@ -193,15 +192,61 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   controller: _tabController,
                   tabs: const [
                     Tab(text: 'My Flashcards'),
-                    Tab(text: 'Shared Flashcards'),
+                    Tab(text: 'Liked Flashcards'),
                   ],
                 ),
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
-                    children: const [
-                      Center(child: Text('User\'s created flashcards will appear here.')),
-                      Center(child: Text('Flashcards shared by this user will appear here.')),
+                    children: [
+                      // "My Flashcards" टैब का कंटेंट
+                      StreamBuilder<QuerySnapshot>(
+                        stream: _firestoreService.getFlashcardsForUser(profileUserId),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                          if (snapshot.data!.docs.isEmpty) {
+                            return const Center(child: Text('This user has no public flashcards.'));
+                          }
+                          final flashcards = snapshot.data!.docs.map((doc) => Flashcard.fromFirestore(doc)).toList();
+                          
+                          return GridView.builder(
+                            padding: const EdgeInsets.all(16),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: 0.8,
+                            ),
+                            itemCount: flashcards.length,
+                            itemBuilder: (context, index) {
+                              final card = flashcards[index];
+                              return GestureDetector(
+                                onTap: () => context.push('/flashcard-viewer', extra: {'flashcards': flashcards, 'index': index}),
+                                child: Card(
+                                  clipBehavior: Clip.antiAlias,
+                                  elevation: 2,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (card.imageUrl.isNotEmpty)
+                                        Expanded(
+                                          child: Image.network(card.imageUrl, width: double.infinity, fit: BoxFit.cover),
+                                        )
+                                      else
+                                        Expanded(child: Container(color: Colors.grey.shade200, child: Center(child: Icon(Icons.image_not_supported)))),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(card.frontText, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                      const Center(child: Text('Liked flashcards will appear here in the future.')),
                     ],
                   ),
                 )
