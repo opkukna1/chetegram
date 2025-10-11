@@ -55,8 +55,9 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
                   title: Text(user.name),
                   subtitle: Text(user.email),
                   onTap: () {
-                    // दूसरे यूज़र की प्रोफाइल पर नेविगेट करें
-                    context.push('/profile/${user.uid}');
+                    // दूसरे यूज़र की प्रोफाइल के लिए नए रूट का उपयोग करें
+                    // .push() का उपयोग करने से बैक बटन सही से काम करेगा
+                    context.push('/view-profile/${user.uid}');
                   },
                 );
               },
