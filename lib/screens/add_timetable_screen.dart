@@ -1,8 +1,8 @@
 import 'package:chetegram/models/time_slot_model.dart';
-import 'package.chetegram/models/timetable_model.dart';
-import 'package.chetegram/services/firestore_service.dart';
-import 'package.flutter/material.dart';
-import 'package.go_router/go_router.dart';
+import 'package:chetegram/models/timetable_model.dart';
+import 'package:chetegram/services/firestore_service.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class TimeSlotState {
   TextEditingController subjectController = TextEditingController();
