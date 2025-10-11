@@ -1,54 +1,59 @@
-import 'package:chetegram/config/router/app_router.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 
-// Firebase के लिए नए इम्पोर्ट्स
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // यह फाइल flutterfire configure ने बनाई थी
+class MainScreen extends StatelessWidget {
+  final Widget child;
+  const MainScreen({super.key, required this.child});
 
-void main() async { // main को async बनाएं
-  // यह सुनिश्चित करें कि Flutter पूरी तरह से तैयार है
-  WidgetsFlutterBinding.ensureInitialized();
-  // Firebase को इनिशियलाइज़ करें
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(const MyApp());
-}
+  int _calculateSelectedIndex(BuildContext context) {
+    final String location = GoRouterState.of(context).uri.path;
+    // .startsWith() का उपयोग करें ताकि /profile/123 जैसी सब-रूट्स भी सही टैब दिखाएं
+    if (location.startsWith('/home')) return 0;
+    if (location.startsWith('/timetable')) return 1;
+    if (location.startsWith('/flashcards')) return 2;
+    if (location.startsWith('/analytics')) return 3;
+    if (location.startsWith('/profile')) return 4;
+    return 0;
+  }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  void _onItemTapped(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        context.go('/home');
+        break;
+      case 1:
+        context.go('/timetable');
+        break;
+      case 2:
+        context.go('/flashcards');
+        break;
+      case 3:
+        context.go('/analytics');
+        break;
+      case 4:
+        context.go('/profile'); // यह अब सही रूट है
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      routerConfig: goRouter,
-      title: 'Chetegram',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
-        useMaterial3: true,
-        fontFamily: GoogleFonts.poppins().fontFamily,
-        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.white,
-          elevation: 1.0,
-          shadowColor: Colors.black26,
-          titleTextStyle: TextStyle(
-            color: Colors.black87,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            fontFamily: GoogleFonts.poppins().fontFamily,
-          ),
-          iconTheme: const IconThemeData(color: Colors.black87),
-        ),
-        cardTheme: CardThemeData(
-          elevation: 2,
-          shadowColor: Colors.black12,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-        ),
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Time Table'),
+          BottomNavigationBarItem(icon: Icon(Icons.layers), label: 'Flashcards'),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Analytics'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        ],
+        currentIndex: _calculateSelectedIndex(context),
+        selectedItemColor: Colors.blueAccent,
+        unselectedItemColor: Colors.grey.shade600,
+        onTap: (index) => _onItemTapped(index, context),
+        type: BottomNavigationBarType.fixed,
+        showUnselectedLabels: true,
       ),
     );
   }
