@@ -31,13 +31,15 @@ dependencies:
   # UI Packages
   flip_card: ^0.7.0
   intl: ^0.19.0
+  fl_chart: ^0.68.0
+  flutter_heatmap_calendar: ^1.0.5 # हीट-मैप के लिए
 
   # Firebase
   firebase_core: ^3.2.0
   firebase_auth: ^5.1.1
   cloud_firestore: ^5.0.2
-  firebase_storage: ^12.1.0  # इमेज स्टोरेज के लिए
-  image_picker: ^1.1.2       # इमेज चुनने के लिए
+  firebase_storage: ^12.1.0
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
