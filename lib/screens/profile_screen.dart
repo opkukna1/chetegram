@@ -5,9 +5,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:chetegram/screens/profile/user_list_screen.dart'; // UserListType के लिए इम्पोर्ट करें
 
 class ProfileScreen extends StatefulWidget {
-  final String? userId; // यह बताएगा कि किसकी प्रोफाइल दिखानी है
+  final String? userId;
   const ProfileScreen({super.key, this.userId});
 
   @override
@@ -22,7 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   final String? _currentUserId = FirebaseAuth.instance.currentUser?.uid;
   
   bool _isFollowing = false;
-  bool _isLoadingFollow = true; // Initially true to show loading
+  bool _isLoadingFollow = true;
 
   @override
   void initState() {
@@ -34,18 +35,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   
   void _loadProfile() {
     setState(() {
-      // अगर userId है, तो उसकी प्रोफाइल लाओ, नहीं तो अपनी
       _userProfileFuture = _firestoreService.getUserProfile(widget.userId);
     });
   }
 
   void _checkIfFollowing() async {
-    // अगर यह मेरी अपनी प्रोफाइल है, तो कुछ नहीं करना
     if (widget.userId == null || widget.userId == _currentUserId) {
       setState(() => _isLoadingFollow = false);
       return;
     }
-    // Firestore से चेक करें कि क्या मैं इस user को फॉलो कर रहा हूँ
     bool following = await _firestoreService.isFollowing(widget.userId!);
     if (mounted) {
       setState(() {
@@ -66,7 +64,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       await _firestoreService.followUser(widget.userId!);
     }
     
-    // UI को अपडेट करने के लिए दोनों फंक्शन्स को दोबारा कॉल करें
     _checkIfFollowing();
     _loadProfile();
   }
@@ -151,10 +148,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                 onPressed: () => context.push('/edit-profile').then((_) => _loadProfile()),
                                 child: const Text('Edit Profile'),
                               )
-                            : _isLoadingFollow
+                            : _isLoadingFollow 
                                 ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
                                 : _isFollowing
-                                    ? OutlinedButton(onPressed: _handleFollowButton, child: const Text('Unfollow'))
+                                    ? OutlinedButton(onPressed: _handleFollowButton, child: const Text('Unfollowing'))
                                     : ElevatedButton(onPressed: _handleFollowButton, child: const Text('Follow')),
                       ),
                       Text(user.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
@@ -172,15 +169,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          Text.rich(TextSpan(children: [
-                            TextSpan(text: '${user.followingCount}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            const TextSpan(text: ' Following'),
-                          ])),
+                          GestureDetector(
+                            onTap: () => context.push('/user-list', extra: {'userId': user.uid, 'listType': UserListType.following}),
+                            child: Text.rich(TextSpan(children: [
+                              TextSpan(text: '${user.followingCount}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              const TextSpan(text: ' Following'),
+                            ])),
+                          ),
                           const SizedBox(width: 16),
-                          Text.rich(TextSpan(children: [
-                            TextSpan(text: '${user.followersCount}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            const TextSpan(text: ' Followers'),
-                          ])),
+                          GestureDetector(
+                            onTap: () => context.push('/user-list', extra: {'userId': user.uid, 'listType': UserListType.followers}),
+                            child: Text.rich(TextSpan(children: [
+                              TextSpan(text: '${user.followersCount}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              const TextSpan(text: ' Followers'),
+                            ])),
+                          ),
                         ],
                       ),
                     ],
