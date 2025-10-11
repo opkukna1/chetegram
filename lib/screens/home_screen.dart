@@ -1,6 +1,7 @@
 import 'package:chetegram/models/task_model.dart';
-import 'package:chetegram/services/database_helper.dart';
+import 'package:chetegram/services/firestore_service.dart';
 import 'package:chetegram/widgets/task_card.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -14,66 +15,38 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  List<Task> _todaysTasks = [];
-  List<Task> _allTasks = []; // Ab hum saare tasks ko ek hi list mein rakhenge
-
-  // Naya Revision Schedule (dinon ka antar)
-  // Stage 1 ke baad -> +1 din
-  // Stage 2 ke baad -> +2 din (total 3)
-  // Stage 3 ke baad -> +4 din (total 7)
-  // Stage 4 ke baad -> +7 din (total 14)
-  // Stage 5 ke baad -> +16 din (total 30)
-  final List<int> revisionIntervals = [1, 2, 4, 7, 16];
+  final FirestoreService _firestoreService = FirestoreService();
+  final List<int> revisionIntervals = [1, 2, 4, 7, 16, 30];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this); // 6 stages + Today's Task
-    _refreshAllTasks();
+    _tabController = TabController(length: 7, vsync: this);
   }
-
-  Future<void> _refreshAllTasks() async {
-    final allTasksFromDb = (await DatabaseHelper.instance.getAllTasks())
-        .map((map) => Task.fromMap(map))
-        .toList();
-
-    DateTime now = DateTime.now();
-    DateTime today = DateTime(now.year, now.month, now.day);
-
-    setState(() {
-      _allTasks = allTasksFromDb;
-      _todaysTasks = _allTasks.where((task) =>
-          task.nextRevisionDate.isBefore(today.add(const Duration(days: 1))) &&
-          task.status == 'pending').toList();
-    });
-  }
-
+  
   Future<void> _markTaskAsDone(Task task) async {
     DateTime now = DateTime.now();
     DateTime today = DateTime(now.year, now.month, now.day);
 
-    // Check karein ki marking aaj hi possible hai ya nahi
-    if (!task.nextRevisionDate.isBefore(today.add(const Duration(days: 1)))) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("You can only mark this task on its scheduled day."))
-      );
+    if (!task.nextRevisionDate.toDate().isBefore(today.add(const Duration(days: 1)))) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("You can only mark this task on its scheduled day.")));
       return;
     }
 
-    int currentStage = task.readingStage;
-    
-    if (currentStage < 6) { // Ab 6 stages hain
-      task.readingStage += 1;
-      int daysToAdd = revisionIntervals[currentStage - 1];
-      task.nextRevisionDate = DateTime.now().add(Duration(days: daysToAdd));
-    } else {
-      task.status = 'completed'; // 6th reading ke baad
-    }
+    // नया स्टेप: रिवीजन को हिस्ट्री में लॉग करें
+    await _firestoreService.addRevisionLog(task.subject);
 
-    await DatabaseHelper.instance.updateTask(task.toMap());
-    _refreshAllTasks();
+    if (task.readingStage < 6) {
+      task.readingStage += 1;
+      // सही इंडेक्स का उपयोग करें (पिछली गलती को ठीक किया गया)
+      int daysToAdd = revisionIntervals[task.readingStage - 2]; 
+      task.nextRevisionDate = Timestamp.fromDate(DateTime.now().add(Duration(days: daysToAdd)));
+    } else {
+      task.status = 'completed';
+    }
+    await _firestoreService.updateTask(task);
   }
-  
+
   void _showEditDeleteMenu(BuildContext context, Task task) {
     showModalBottomSheet(
       context: context,
@@ -84,18 +57,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               leading: const Icon(Icons.edit),
               title: const Text('Edit'),
               onTap: () {
-                Navigator.pop(context); // Bottom sheet ko band karo
-                // Edit screen par jao
-                context.push('/edit-task', extra: task).then((_) => _refreshAllTasks());
+                Navigator.pop(context);
+                context.push('/edit-task', extra: task);
               },
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
               title: const Text('Delete', style: TextStyle(color: Colors.red)),
               onTap: () async {
-                Navigator.pop(context); // Bottom sheet ko band karo
-                await DatabaseHelper.instance.deleteTask(task.id!);
-                _refreshAllTasks();
+                Navigator.pop(context);
+                await _firestoreService.deleteTask(task.id!);
               },
             ),
           ],
@@ -108,34 +79,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-  
-  Widget _buildTaskList(List<Task> tasks) {
-    if (tasks.isEmpty) {
-      return const Center(child: Text('No topics here.'));
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 80), // FAB ke liye space
-      itemCount: tasks.length,
-      itemBuilder: (context, index) {
-        final task = tasks[index];
-        return GestureDetector(
-          onLongPress: () => _showEditDeleteMenu(context, task),
-          child: TaskCard(
-            subject: task.subject,
-            topic: task.topic,
-            revisionText: '${task.readingStage} Reading',
-            nextRevision: DateFormat.yMMMd().format(task.nextRevisionDate),
-            onMarkAsDone: (isDone) => _markTaskAsDone(task),
-          ),
-        );
-      },
-    );
-  }
-
-  // Stage ke hisaab se tasks filter karne ke liye
-  List<Task> _getTasksForStage(int stage) {
-    return _allTasks.where((t) => t.readingStage == stage).toList();
   }
 
   @override
@@ -158,24 +101,64 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildTaskList(_todaysTasks),
-          _buildTaskList(_getTasksForStage(1)),
-          _buildTaskList(_getTasksForStage(2)),
-          _buildTaskList(_getTasksForStage(3)),
-          _buildTaskList(_getTasksForStage(4)),
-          _buildTaskList(_getTasksForStage(5)),
-          _buildTaskList(_getTasksForStage(6)),
-        ],
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _firestoreService.getTasksStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(child: Text('No tasks yet. Tap "+" to add one!', textAlign: TextAlign.center));
+          }
+
+          final allTasks = snapshot.data!.docs.map((doc) => Task.fromFirestore(doc)).toList();
+          DateTime now = DateTime.now();
+          DateTime today = DateTime(now.year, now.month, now.day);
+
+          final todaysTasks = allTasks.where((task) =>
+              task.nextRevisionDate.toDate().isBefore(today.add(const Duration(days: 1))) &&
+              task.status == 'pending').toList();
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildTaskList(todaysTasks),
+              _buildTaskList(allTasks.where((t) => t.readingStage == 1).toList()),
+              _buildTaskList(allTasks.where((t) => t.readingStage == 2).toList()),
+              _buildTaskList(allTasks.where((t) => t.readingStage == 3).toList()),
+              _buildTaskList(allTasks.where((t) => t.readingStage == 4).toList()),
+              _buildTaskList(allTasks.where((t) => t.readingStage == 5).toList()),
+              _buildTaskList(allTasks.where((t) => t.readingStage == 6).toList()),
+            ],
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/add-task').then((_) => _refreshAllTasks());
-        },
+        onPressed: () => context.push('/add-task'),
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  Widget _buildTaskList(List<Task> tasks) {
+    if (tasks.isEmpty) return const Center(child: Text('No topics here.'));
+    
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 80),
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        return GestureDetector(
+          onLongPress: () => _showEditDeleteMenu(context, task),
+          child: TaskCard(
+            subject: task.subject,
+            topic: task.topic,
+            revisionText: '${task.readingStage} Reading',
+            nextRevision: DateFormat.yMMMd().format(task.nextRevisionDate.toDate()),
+            onMarkAsDone: (isDone) => _markTaskAsDone(task),
+          ),
+        );
+      },
     );
   }
 }
