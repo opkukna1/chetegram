@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:chetegram/services/firestore_service.dart';
 import 'package:chetegram/services/storage_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -29,7 +31,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _loadInitialData() {
-    _firestoreService.getUserProfile().then((doc) {
+    _firestoreService.getUserProfile(null).then((doc) {
       if (doc != null && doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
         _nameController.text = data['name'] ?? '';
@@ -84,8 +86,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 children: [
                   GestureDetector(
                     onTap: () async {
+                      final imageFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+                      if (imageFile == null) return;
                       setState(() => _isLoading = true);
-                      final url = await _storageService.pickAndUploadImage('cover_photos/${_currentUser!.uid}');
+                      final url = await _storageService.uploadImage('cover_photos/${_currentUser!.uid}', File(imageFile.path));
                       if (url != null) setState(() => _coverPhotoUrl = url);
                       setState(() => _isLoading = false);
                     },
@@ -104,8 +108,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     padding: const EdgeInsets.only(left: 16.0),
                     child: GestureDetector(
                       onTap: () async {
+                        final imageFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+                        if (imageFile == null) return;
                         setState(() => _isLoading = true);
-                        final url = await _storageService.pickAndUploadImage('profile_pics/${_currentUser!.uid}');
+                        final url = await _storageService.uploadImage('profile_pics/${_currentUser!.uid}', File(imageFile.path));
                         if (url != null) setState(() => _profilePicUrl = url);
                         setState(() => _isLoading = false);
                       },
