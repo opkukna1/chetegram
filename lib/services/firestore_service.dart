@@ -251,6 +251,18 @@ class FirestoreService {
     } catch (e) { print('Error getting tasks count by subject: $e'); return {}; }
   }
 
+  Future<int> getTasksCount() async {
+    if (_user == null) return 0;
+    final snapshot = await _tasksCollection.get();
+    return snapshot.docs.length;
+  }
+
+  Future<List<Task>> getCompletedTasks() async {
+    if (_user == null) return [];
+    final snapshot = await _tasksCollection.where('status', isEqualTo: 'completed').get();
+    return snapshot.docs.map((doc) => Task.fromFirestore(doc)).toList();
+  }
+
   Future<void> addRevisionLog(String subject) async {
     if (_user == null) return;
     try {
