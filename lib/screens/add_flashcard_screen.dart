@@ -1,12 +1,9 @@
-import 'dart:io';
 import 'package:chetegram/models/flashcard_model.dart';
 import 'package:chetegram/services/firestore_service.dart';
-import 'package:chetegram/services/storage_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 class AddFlashcardScreen extends StatefulWidget {
   const AddFlashcardScreen({super.key});
@@ -20,12 +17,10 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
   final _frontController = TextEditingController();
   final _backController = TextEditingController();
   final FirestoreService _firestoreService = FirestoreService();
-  final StorageService _storageService = StorageService();
   
   String? _selectedSubject;
   String? _selectedTopic;
   bool _isPublic = false;
-  File? _imageFile;
   bool _isLoading = false;
 
   final Map<String, List<String>> _subjectsAndTopics = {
@@ -48,48 +43,22 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
 
   String _colorToHex(Color color) => '#${color.value.toRadixString(16).substring(2)}';
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
-    }
-  }
-
   Future<void> _submitFlashcard() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        setState(() => _isLoading = false);
-        return;
-      }
-      
-      String imageUrl = '';
-      if (_imageFile != null) {
-        final downloadUrl = await _storageService.uploadImage(
-          'flashcard_images/${user.uid}/${DateTime.now().millisecondsSinceEpoch}',
-          _imageFile!
-        );
-        if (downloadUrl != null) {
-          imageUrl = downloadUrl;
-        }
-      }
+      if (user == null) return;
 
       final newFlashcard = Flashcard(
         creatorId: user.uid,
         creatorName: user.displayName ?? 'Anonymous',
-        creatorPicUrl: user.photoURL ?? '',
         subject: _selectedSubject!,
         topic: _selectedTopic!,
         frontText: _frontController.text,
         backText: _backController.text,
         colorHex: _colorToHex(_selectedColor),
         isPublic: _isPublic,
-        imageUrl: imageUrl,
         createdAt: Timestamp.now(),
       );
 
@@ -121,23 +90,6 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Container(
-                      height: 180,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(12),
-                        image: _imageFile != null ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover) : null,
-                      ),
-                      child: _imageFile == null 
-                        ? const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.add_a_photo), Text("Add Photo")])) 
-                        : null,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
                   DropdownButtonFormField<String>(
                     value: _selectedSubject,
                     hint: const Text('Choose Subject'),
