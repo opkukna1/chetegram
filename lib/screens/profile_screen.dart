@@ -41,23 +41,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
   
   Future<DocumentSnapshot?> _getOrCreateUserProfile() async {
-    if (widget.userId != null) {
-      return await _firestoreService.getUserProfile(widget.userId);
-    }
-    
+    if (widget.userId != null) return await _firestoreService.getUserProfile(widget.userId);
     if (_currentUser == null) return null;
-
     DocumentSnapshot? profileDoc = await _firestoreService.getUserProfile(null);
-
     if (profileDoc == null || !profileDoc.exists) {
-      await _firestoreService.createUserProfile(
-        uid: _currentUser!.uid,
-        name: _currentUser!.displayName ?? "New User",
-        email: _currentUser!.email!,
-      );
+      await _firestoreService.createUserProfile(uid: _currentUser!.uid, name: _currentUser!.displayName ?? "New User", email: _currentUser!.email!);
       return await _firestoreService.getUserProfile(null);
     }
-    
     return profileDoc;
   }
 
@@ -105,7 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (!snapshot.hasData || snapshot.data == null || !snapshot.data!.exists) {
+          if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(child: Text('Profile not found or could not be created.'));
           }
 
@@ -116,17 +106,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               return <Widget>[
                 SliverAppBar(
                   expandedHeight: 150.0,
-                  floating: false,
-                  pinned: true,
+                  floating: false, pinned: true,
                   actions: [
                     if(isMyProfile)
-                      IconButton(
-                        icon: const Icon(Icons.logout),
-                        onPressed: () async {
-                          await _authService.signOut();
-                          if (mounted) context.go('/login');
-                        },
-                      ),
+                      IconButton(icon: const Icon(Icons.logout), onPressed: () async { await _authService.signOut(); if (mounted) context.go('/login'); }),
                   ],
                   flexibleSpace: FlexibleSpaceBar(
                     background: Stack(
@@ -134,15 +117,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       children: [
                         Container(color: Colors.deepPurple.shade300),
                         Positioned(
-                          bottom: -1,
-                          left: 16,
+                          bottom: -1, left: 16,
                           child: CircleAvatar(
                             radius: 52,
                             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                            child: const CircleAvatar(
-                              radius: 50,
-                              child: Icon(Icons.person, size: 60),
-                            ),
+                            child: const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 60)),
                           ),
                         ),
                       ],
@@ -161,10 +140,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       Align(
                         alignment: Alignment.centerRight,
                         child: isMyProfile
-                            ? OutlinedButton(
-                                onPressed: () => context.push('/edit-profile').then((_) => _loadProfile()),
-                                child: const Text('Edit Profile'),
-                              )
+                            ? OutlinedButton(onPressed: () => context.push('/edit-profile').then((_) => _loadProfile()), child: const Text('Edit Profile'))
                             : _isLoadingFollow 
                                 ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
                                 : _isFollowing
@@ -206,33 +182,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     ],
                   ),
                 ),
-                TabBar(
-                  controller: _tabController,
-                  tabs: const [
-                    Tab(text: 'My Flashcards'),
-                    Tab(text: 'Liked Flashcards'),
-                  ],
-                ),
+                TabBar(controller: _tabController, tabs: const [Tab(text: 'My Flashcards'), Tab(text: 'Liked Flashcards')]),
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      // "My Flashcards" टैब का कंटेंट
                       if (profileUserId != null)
                         StreamBuilder<QuerySnapshot>(
                           stream: _firestoreService.getFlashcardsForUser(profileUserId),
                           builder: (context, snapshot) {
                             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                            if (snapshot.data!.docs.isEmpty) {
-                              return Center(child: Text(isMyProfile ? 'You have no public flashcards.' : 'This user has no public flashcards.'));
-                            }
+                            if (snapshot.data!.docs.isEmpty) return Center(child: Text(isMyProfile ? 'You have no public flashcards.' : 'This user has no public flashcards.'));
                             final flashcards = snapshot.data!.docs.map((doc) => Flashcard.fromFirestore(doc)).toList();
-                            
                             return GridView.builder(
                               padding: const EdgeInsets.all(16),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.8,
-                              ),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.8),
                               itemCount: flashcards.length,
                               itemBuilder: (context, index) {
                                 final card = flashcards[index];
@@ -244,7 +208,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // Image View is removed, showing a colored container instead
                                         Expanded(child: Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.article_outlined)))),
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
@@ -260,7 +223,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         )
                       else
                         const Center(child: Text("Could not load flashcards.")),
-                      
                       const Center(child: Text('Liked flashcards will appear here in the future.')),
                     ],
                   ),
