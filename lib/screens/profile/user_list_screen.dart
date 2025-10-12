@@ -9,12 +9,7 @@ class UserListScreen extends StatefulWidget {
   final String userId;
   final UserListType listType;
 
-  const UserListScreen({
-    super.key,
-    required this.userId,
-    required this.listType,
-  });
-
+  const UserListScreen({super.key, required this.userId, required this.listType});
   @override
   State<UserListScreen> createState() => _UserListScreenState();
 }
@@ -36,9 +31,7 @@ class _UserListScreenState extends State<UserListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.listType == UserListType.followers ? 'Followers' : 'Following'),
-      ),
+      appBar: AppBar(title: Text(widget.listType == UserListType.followers ? 'Followers' : 'Following')),
       body: FutureBuilder<List<UserModel>>(
         future: _usersFuture,
         builder: (context, snapshot) {
@@ -46,7 +39,7 @@ class _UserListScreenState extends State<UserListScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No users found in this list.'));
+            return const Center(child: Text('No users found in this list.'));
           }
 
           final users = snapshot.data!;
@@ -55,16 +48,10 @@ class _UserListScreenState extends State<UserListScreen> {
             itemBuilder: (context, index) {
               final user = users[index];
               return ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: user.profilePicUrl.isNotEmpty ? NetworkImage(user.profilePicUrl) : null,
-                  child: user.profilePicUrl.isEmpty ? const Icon(Icons.person) : null,
-                ),
+                leading: const CircleAvatar(child: Icon(Icons.person)),
                 title: Text(user.name),
                 subtitle: Text('@${user.email.split('@')[0]}'),
-                onTap: () {
-                  // उस यूज़र की प्रोफाइल पर जाएं
-                  context.push('/profile/${user.uid}');
-                },
+                onTap: () => context.push('/view-profile/${user.uid}'),
               );
             },
           );
