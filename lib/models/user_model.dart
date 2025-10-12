@@ -31,12 +31,4 @@ class UserModel {
       followingCount: data['followingCount'] ?? 0,
     );
   }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'bio': bio,
-      'location': location,
-    };
-  }
 }
