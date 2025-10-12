@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 class FeedFlashcardItem extends StatefulWidget {
   final Flashcard flashcard;
   const FeedFlashcardItem({super.key, required this.flashcard});
-
   @override
   State<FeedFlashcardItem> createState() => _FeedFlashcardItemState();
 }
@@ -25,20 +24,16 @@ class _FeedFlashcardItemState extends State<FeedFlashcardItem> {
             child: _buildNoteCard(widget.flashcard, context),
           ),
         ),
-        
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               GestureDetector(
-                onTap: () => context.push('/profile/${widget.flashcard.creatorId}'),
+                onTap: () => context.push('/view-profile/${widget.flashcard.creatorId}'),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      backgroundImage: widget.flashcard.creatorPicUrl.isNotEmpty ? NetworkImage(widget.flashcard.creatorPicUrl) : null,
-                      child: widget.flashcard.creatorPicUrl.isEmpty ? const Icon(Icons.person) : null,
-                    ),
+                    const CircleAvatar(child: Icon(Icons.person)),
                     const SizedBox(width: 12),
                     Text(widget.flashcard.creatorName, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16, shadows: [Shadow(blurRadius: 2)])),
                   ],
@@ -85,7 +80,6 @@ class _FeedFlashcardItemState extends State<FeedFlashcardItem> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (card.imageUrl.isNotEmpty) Image.network(card.imageUrl, height: 200, width: double.infinity, fit: BoxFit.cover),
               Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
@@ -116,9 +110,9 @@ class _FeedFlashcardItemState extends State<FeedFlashcardItem> {
           Icon(Icons.check_circle, color: Colors.purple.shade300, size: 20),
           const SizedBox(width: 12),
           Expanded(child: RichText(text: TextSpan(
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 16),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 16, color: Colors.black87),
             children: [
-              TextSpan(text: '$key: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+              TextSpan(text: '$key: ', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
               TextSpan(text: value),
             ],
           ))),
