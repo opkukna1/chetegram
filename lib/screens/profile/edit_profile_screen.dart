@@ -1,6 +1,6 @@
 import 'package:chetegram/services/firestore_service.dart';
-import 'package.firebase_auth/firebase_auth.dart';
-import 'package.flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart'; // यह इम्पोर्ट छूट गया था
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
