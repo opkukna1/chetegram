@@ -42,6 +42,7 @@ class Flashcard {
     };
   }
 
+  // --- MODIFIED SECTION ---
   factory Flashcard.fromFirestore(DocumentSnapshot doc) {
     Map data = doc.data() as Map<String, dynamic>;
     return Flashcard(
@@ -55,7 +56,8 @@ class Flashcard {
       colorHex: data['colorHex'] ?? '#FFFFFF',
       isPublic: data['isPublic'] ?? false,
       likeCount: data['likeCount'] ?? 0,
-      createdAt: data['createdAt'] ?? Timestamp.now(),
+      // This line is now safer. It checks the type before assigning.
+      createdAt: data['createdAt'] is Timestamp ? data['createdAt'] : Timestamp.now(),
     );
   }
 }
